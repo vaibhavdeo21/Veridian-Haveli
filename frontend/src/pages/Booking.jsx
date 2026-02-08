@@ -661,6 +661,7 @@ const PaymentForm = ({ finalTotals, onConfirm, paymentMode, setPaymentMode }) =>
           onClick={() => onConfirm(paymentMode, amountToPay)}
           className={`w-full h-14 rounded-xl font-bold text-lg transition shadow-sm hover:shadow-md tracking-wider ${paymentMode === 'PayAtHotel' ? 'border border-haveli-accent text-haveli-accent hover:bg-haveli-bg uppercase text-sm' : 'bg-haveli-primary text-white hover:bg-haveli-primaryHover'}`}
         >
+          {paymentMode === 'PayAtHotel' ? (
             <>Finalize Reservation</>
           ) : (
             <><i className="fas fa-lock mr-2 text-sm opacity-80"></i>Settle ₹{amountToPay.toLocaleString(undefined, {minimumFractionDigits: 2})}</>
