@@ -6,25 +6,38 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const CustomerDetailsPanel = () => {
-  // Added rooms, checkInCustomer, and checkOutCustomer to destructured useData
-  const { customers, rooms, checkInCustomer, checkOutCustomer } = useData();
+  // NEW: Added deleteCustomer to destructured useData
+  const { customers, rooms, checkInCustomer, checkOutCustomer, deleteCustomer } = useData();
   const { showNotification } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCustomerId, setExpandedCustomerId] = useState(null);
 
-  // --- NEW: Modals state for Check-in / Check-out ---
+  // NEW: Tab State for Current vs All
+  const [activeTab, setActiveTab] = useState('current');
+
+  // --- Modals state for Check-in / Check-out ---
   const [checkInModal, setCheckInModal] = useState({ isOpen: false, customerId: null, requiredType: '' });
   const [checkOutModal, setCheckOutModal] = useState({ isOpen: false, customer: null, lateHours: 0 });
 
-  // Filter customers based on search query
+  // Filter customers based on search query AND active tab
   const filteredCustomers = useMemo(() => {
     if (!customers) return [];
-    return customers.filter(c =>
-      // SYNC FIX: Use guestName to match the Booking schema
+    
+    let filtered = customers.filter(c =>
       (c.guestName && c.guestName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (c.roomNumber && c.roomNumber.toString().includes(searchQuery))
     );
-  }, [customers, searchQuery]);
+
+    // Filter by tab
+    if (activeTab === 'current') {
+      filtered = filtered.filter(c => {
+        const status = (c.status || '').replace(/\s/g, "").toLowerCase();
+        return status === 'booked' || status === 'checkedin';
+      });
+    }
+
+    return filtered;
+  }, [customers, searchQuery, activeTab]);
 
   const toggleExpenses = (customerId) => {
     if (expandedCustomerId === customerId) {
@@ -34,7 +47,7 @@ const CustomerDetailsPanel = () => {
     }
   };
 
-  // --- NEW: Check In Logic ---
+  // --- Check In Logic ---
   const handleOpenCheckIn = (customer) => {
     setCheckInModal({ isOpen: true, customerId: customer._id || customer.id, requiredType: customer.roomType || 'Single' });
   };
@@ -45,7 +58,7 @@ const CustomerDetailsPanel = () => {
     setCheckInModal({ isOpen: false, customerId: null, requiredType: '' });
   };
 
-  // --- NEW: Check Out Logic ---
+  // --- Check Out Logic ---
   const handleOpenCheckOut = (customer) => {
     setCheckOutModal({ isOpen: true, customer, lateHours: 0 });
   };
@@ -65,24 +78,40 @@ const CustomerDetailsPanel = () => {
     setCheckOutModal({ isOpen: false, customer: null, lateHours: 0 });
   };
 
+  // --- NEW: Handle Permanent Delete ---
+  const handleDeleteCustomer = (id) => {
+    if (window.confirm("WARNING: This will permanently remove the customer and all associated data from the database. This action cannot be undone.")) {
+      deleteCustomer(id);
+    }
+  };
+
   const handleDownloadReport = () => {
     const doc = new jsPDF();
-    doc.text("Customer Report", 14, 16);
+    doc.text(`Customer Report - ${activeTab === 'current' ? 'Current Stays' : 'All History'}`, 14, 16);
 
     const tableHead = [
-      ["ID", "Name", "Room", "Check-in", "Check-out", "Subtotal", "GST", "Total Bill", "Status"]
+      ["ID", "Name", "Room", "Check-in", "Check-out", "Room(Inc. GST)", "Extras GST", "Total Bill", "Status"]
     ];
-    const tableBody = filteredCustomers.map(c => [
-      c._id || c.id,
-      c.guestName,
-      c.roomNumber,
-      c.checkInDate,
-      c.checkOutDate,
-      "Rs. " + (c.totalAmount || 0).toLocaleString(),
-      "Rs. " + ((c.totalAmount || 0) * 0.18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      "Rs. " + ((c.totalAmount || 0) * 1.18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-      c.paymentStatus,
-    ]);
+    
+    const tableBody = filteredCustomers.map(c => {
+      // FIXED GST MATH FOR PDF
+      const roomCharge = c.totalAmount || 0; 
+      const extraCharges = (c.foodCharges || 0) + (c.lateNightFee || 0) + (c.lateFee || 0);
+      const extraGST = (c.foodCharges || 0) * 0.18; // Only tax food
+      const grandTotal = roomCharge + extraCharges + extraGST;
+
+      return [
+        c._id || c.id,
+        c.guestName + (c.isRepeatCustomer ? " (Repeat)" : ""),
+        c.roomNumber,
+        new Date(c.checkInDate).toLocaleDateString(),
+        new Date(c.checkOutDate).toLocaleDateString(),
+        "Rs. " + roomCharge.toLocaleString(),
+        "Rs. " + extraGST.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        "Rs. " + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        c.paymentStatus,
+      ];
+    });
 
     autoTable(doc, {
       startY: 22,
@@ -98,30 +127,51 @@ const CustomerDetailsPanel = () => {
 
   return (
     <div id="customer-details-panel">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Customer Details</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Customer Management</h2>
 
-      <div className="mb-6 flex justify-between items-center">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search by name, room, or ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-80 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
-          />
-          <i className="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+        
+        {/* NEW: Tab Navigation */}
+        <div className="flex space-x-2 bg-gray-200 p-1 rounded-lg">
+          <button 
+            onClick={() => setActiveTab('current')}
+            className={`px-4 py-2 rounded-md font-bold text-sm transition ${activeTab === 'current' ? 'bg-white text-amber-700 shadow' : 'text-gray-600 hover:text-gray-800'}`}
+          >
+            Current Staying Customers
+          </button>
+          <button 
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2 rounded-md font-bold text-sm transition ${activeTab === 'all' ? 'bg-white text-amber-700 shadow' : 'text-gray-600 hover:text-gray-800'}`}
+          >
+            All Customers
+          </button>
         </div>
-        <button
-          onClick={handleDownloadReport}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition"
-        >
-          <i className="fas fa-file-pdf mr-2"></i> Download PDF Report
-        </button>
+
+        <div className="flex space-x-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search by name, room, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-80 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pl-10"
+            />
+            <i className="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+          </div>
+          <button
+            onClick={handleDownloadReport}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition whitespace-nowrap"
+          >
+            <i className="fas fa-file-pdf mr-2"></i> Download PDF
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="p-6 border-b flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-800">All Customer Details</h3>
+          <h3 className="text-lg font-semibold text-gray-800">
+            {activeTab === 'current' ? 'Currently Active Bookings' : 'Complete Customer History'}
+          </h3>
           <span className="text-gray-600">
             Total Customers: <span className="font-bold">{filteredCustomers.length}</span>
           </span>
@@ -134,10 +184,9 @@ const CustomerDetailsPanel = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stay</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room Charges</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Food Charges</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GST (18%)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room (Inc. GST)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Food/Extras</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Extras GST(18%)</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Bill</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -154,10 +203,17 @@ const CustomerDetailsPanel = () => {
                   onToggleExpand={() => toggleExpenses(customer._id || customer.id)}
                   onCheckIn={() => handleOpenCheckIn(customer)}
                   onCheckOut={() => handleOpenCheckOut(customer)}
+                  onDelete={() => handleDeleteCustomer(customer._id || customer.id)}
+                  activeTab={activeTab}
                 />
               ))}
             </tbody>
           </table>
+          {filteredCustomers.length === 0 && (
+            <div className="p-8 text-center text-gray-500 font-bold">
+              No customers found in this section.
+            </div>
+          )}
         </div>
       </div>
 
@@ -215,14 +271,12 @@ const CustomerDetailsPanel = () => {
   );
 };
 
-const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckOut }) => {
+const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckOut, onDelete, activeTab }) => {
   const { updateCustomerPaymentStatus } = useData();
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
-  // NORMALIZATION: Remove spaces and lowercase for reliable matching
   const normalizedStatus = (customer.status || "").replace(/\s/g, "").toLowerCase();
-  
   const isCheckedIn = normalizedStatus === 'checkedin';
   const isCheckedOut = normalizedStatus === 'checkedout';
   const isOnlinePlaceholder = customer.roomNumber?.toLowerCase().includes('online');
@@ -239,15 +293,27 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
       : 'bg-yellow-100 text-yellow-800 ring-yellow-600/20';
   };
 
-  const subtotal = (customer.totalAmount || 0) + (customer.foodCharges || 0);
-  const gst = subtotal * 0.18;
-  const total = subtotal + gst;
+  // --- NEW: FIXED GST MATH ---
+  const roomCharge = customer.totalAmount || 0; // GST is already baked into this from Booking.jsx
+  const foodCharges = customer.foodCharges || 0;
+  const lateNightFee = customer.lateNightFee || 0;
+  const lateFee = customer.lateFee || 0;
+  
+  const extraCharges = foodCharges + lateNightFee + lateFee;
+  const extraGST = foodCharges * 0.18; // Only tax the food!
+  const grandTotal = roomCharge + extraCharges + extraGST;
 
   return (
     <>
       <tr className="hover:bg-gray-50">
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm font-medium text-gray-900">{customer.guestName}</div>
+          <div className="text-sm font-medium text-gray-900 flex items-center">
+            {customer.guestName}
+            {/* REPEAT CUSTOMER BADGE */}
+            {customer.isRepeatCustomer && (
+              <span className="ml-2 bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Repeat</span>
+            )}
+          </div>
           <div className="text-[10px] text-gray-400">{customer._id || customer.id}</div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
@@ -260,19 +326,16 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
           <div className="text-[10px] text-gray-500">Duration: {customer.stayDuration || 1} day(s)</div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-gray-900">₹{(customer.totalAmount || 0).toLocaleString()}</div>
+          <div className="text-sm font-medium text-gray-800">₹{roomCharge.toLocaleString()}</div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-gray-900">₹{(customer.foodCharges || 0).toLocaleString()}</div>
+          <div className="text-sm text-gray-600">₹{extraCharges.toLocaleString()}</div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-gray-900 font-medium">₹{subtotal.toLocaleString()}</div>
+          <div className="text-sm text-gray-500">₹{extraGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-gray-900">₹{gst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-        </td>
-        <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm font-bold text-amber-700">₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="text-sm font-black text-amber-700">₹{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
           <select
@@ -281,6 +344,7 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
             className={`text-sm font-medium rounded-full px-3 py-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 border-none ${getStatusColorClasses(customer.paymentStatus)}`}
           >
             <option value="Pending">Pending</option>
+            <option value="Partial">Partial</option>
             <option value="Paid">Paid</option>
             <option value="Complete">Complete</option>
           </select>
@@ -296,13 +360,23 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
         </td>
 
         <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
-          {/* View Details Button navigating to dedicated Customer Profile page */}
           <button 
             onClick={() => navigate(`/admin/customer/${customer._id || customer.id}`)}
-            className="bg-gray-800 hover:bg-black text-white px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm"
+            className="bg-gray-800 hover:bg-black text-white px-3 py-1.5 rounded text-xs font-bold transition-all shadow-sm"
           >
             View Details
           </button>
+          
+          {/* PERMANENT DELETE BUTTON - ONLY IN 'ALL' TAB */}
+          {activeTab === 'all' && (
+            <button 
+              onClick={onDelete}
+              className="bg-red-100 hover:bg-red-600 text-red-700 hover:text-white px-2 py-1.5 rounded text-xs font-bold transition shadow-sm ml-2"
+              title="Permanently Delete"
+            >
+              <i className="fas fa-trash"></i>
+            </button>
+          )}
         </td>
 
         <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -313,7 +387,7 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan="12" className="p-0">
+          <td colSpan="11" className="p-0">
             <CustomerExpenseDropdown customer={customer} />
           </td>
         </tr>
@@ -325,6 +399,7 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
 const CustomerExpenseDropdown = ({ customer }) => {
   const { orders } = useData();
 
+  // Extract values for breakdown
   const roomCharge = customer.totalAmount || 0;
   const foodOrders = Array.isArray(orders) ? orders
     .filter(o => o.roomNo === customer.roomNumber)
@@ -335,6 +410,12 @@ const CustomerExpenseDropdown = ({ customer }) => {
       amount: o.totalAmount,
       quantity: o.quantity || 1,
     })) : [];
+
+  const foodTotal = foodOrders.reduce((sum, o) => sum + o.amount, 0);
+  const lateFees = (customer.lateFee || 0) + (customer.lateNightFee || 0);
+  const subtotal = roomCharge + foodTotal + lateFees;
+  const extraGST = foodTotal * 0.18; // Only food is taxed here
+  const grandTotal = subtotal + extraGST;
 
   const handleDownloadReceipt = () => {
     const doc = new jsPDF();
@@ -381,9 +462,16 @@ const CustomerExpenseDropdown = ({ customer }) => {
 
     tableBody.push([
       new Date(checkInDate).toLocaleDateString(),
-      `Room Charges (${stayDuration || 1} night(s) @ Rs. ${(roomCharge / (stayDuration || 1)).toLocaleString()})`,
+      `Room Charges (Inc. GST) (${stayDuration || 1} night(s))`,
       "Rs. " + roomCharge.toLocaleString()
     ]);
+
+    if (customer.lateNightFee > 0) {
+      tableBody.push([new Date(checkInDate).toLocaleDateString(), 'Late Night Check-In Fee', "Rs. " + customer.lateNightFee.toLocaleString()]);
+    }
+    if (customer.lateFee > 0) {
+      tableBody.push([new Date(checkOutDate).toLocaleDateString(), 'Late Check-Out Penalty', "Rs. " + customer.lateFee.toLocaleString()]);
+    }
 
     foodOrders.forEach(order => {
       tableBody.push([
@@ -393,10 +481,6 @@ const CustomerExpenseDropdown = ({ customer }) => {
       ]);
     });
 
-    const subtotal = roomCharge + foodOrders.reduce((sum, o) => sum + o.amount, 0);
-    const gst = subtotal * 0.18;
-    const total = subtotal + gst;
-
     autoTable(doc, {
       startY: 85,
       head: tableHead,
@@ -405,8 +489,8 @@ const CustomerExpenseDropdown = ({ customer }) => {
       headStyles: { fillColor: [75, 85, 99] },
       foot: [
         ['', 'Subtotal', "Rs. " + subtotal.toLocaleString()],
-        ['', 'GST (18%)', "Rs. " + gst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
-        ['', { content: 'Total Bill', styles: { fontStyle: 'bold' } }, { content: "Rs. " + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), styles: { fontStyle: 'bold' } }],
+        ['', 'Extras GST (18% on food)', "Rs. " + extraGST.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+        ['', { content: 'Total Bill', styles: { fontStyle: 'bold' } }, { content: "Rs. " + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), styles: { fontStyle: 'bold' } }],
       ],
       footStyles: { fillColor: [243, 244, 246], textColor: [0, 0, 0] },
       didDrawCell: (data) => {
@@ -426,18 +510,25 @@ const CustomerExpenseDropdown = ({ customer }) => {
 
   return (
     <div className="bg-amber-50 p-4 border-l-4 border-amber-500">
-      <h4 className="font-bold text-gray-800 mb-2">Detailed Bill for {customer.guestName} (Room {customer.roomNumber})</h4>
+      <h4 className="font-bold text-gray-800 mb-2">Detailed Bill Breakdown</h4>
       <div className="max-h-48 overflow-y-auto pr-2">
         <ul className="space-y-1">
           <li className="flex justify-between">
-            <span className="text-gray-700">Room Charges ({customer.stayDuration || 1} night(s))</span>
-            <span className="font-medium text-gray-800">₹{(customer.totalAmount || 0).toLocaleString()}</span>
+            <span className="text-gray-700">Room Charges (Inc. GST) ({customer.stayDuration || 1} night(s))</span>
+            <span className="font-medium text-gray-800">₹{roomCharge.toLocaleString()}</span>
           </li>
 
           {customer.lateFee > 0 && (
             <li className="flex justify-between text-red-600">
               <span>Late Check-Out Penalty</span>
               <span className="font-medium">₹{customer.lateFee.toLocaleString()}</span>
+            </li>
+          )}
+          
+          {customer.lateNightFee > 0 && (
+            <li className="flex justify-between text-red-600">
+              <span>Late Night Check-In Fee</span>
+              <span className="font-medium">₹{customer.lateNightFee.toLocaleString()}</span>
             </li>
           )}
 
@@ -450,23 +541,19 @@ const CustomerExpenseDropdown = ({ customer }) => {
               </li>
             ))
           ) : (
-            <li className="text-gray-500 pl-4">No food orders found.</li>
+            <li className="text-gray-500 pl-4 text-sm">No food orders found.</li>
           )}
         </ul>
       </div>
 
       <div className="border-t border-amber-300 mt-3 pt-3 space-y-1">
         <div className="flex justify-between">
-          <span className="font-semibold text-gray-700">Subtotal</span>
-          <span className="font-semibold text-gray-800">₹{((customer.totalAmount || 0) + (customer.foodCharges || 0)).toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="font-semibold text-gray-700">GST (18%)</span>
-          <span className="font-semibold text-gray-800">₹{(((customer.totalAmount || 0) + (customer.foodCharges || 0)) * 0.18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span className="font-semibold text-gray-700">Extras GST (18% on food)</span>
+          <span className="font-semibold text-gray-800">₹{extraGST.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
         <div className="flex justify-between text-lg">
           <span className="font-bold text-gray-900">Total Bill</span>
-          <span className="font-bold text-amber-700">₹{(((customer.totalAmount || 0) + (customer.foodCharges || 0)) * 1.18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span className="font-bold text-amber-700">₹{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
       </div>
 

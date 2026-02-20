@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useNotification } from '../context/NotificationContext';
-import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../context/AuthContext';
 
 const roomConfig = {
   single: { name: 'Single Bed Room', price: 2500 },
@@ -21,9 +21,9 @@ const getTomorrow = () => {
 };
 
 const Booking = () => {
-  const { addCustomer, rooms } = useData(); 
+  const { addCustomer, rooms } = useData();
   const { showNotification } = useNotification();
-  const { user, updateActiveBooking } = useAuth(); 
+  const { user, updateActiveBooking } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [dates, setDates] = useState({
@@ -48,6 +48,14 @@ const Booking = () => {
     requests: '',
   });
 
+  const isRepeatCustomer = useMemo(() => {
+    if (!user || !customers) return false;
+    return customers.some(c => 
+      c.email === user.email || 
+      c.username === user.username
+    );
+  }, [user, customers]);
+  
   const roomAvailability = useMemo(() => {
     const counts = { single: 0, double: 0, triple: 0, dormitory: 0 };
     if (Array.isArray(rooms)) {
@@ -99,10 +107,14 @@ const Booking = () => {
 
   const finalTotals = useMemo(() => {
     const { roomTotal } = roomTotals;
-    const tax = roomTotal * TAX_RATE;
-    const grandTotal = roomTotal + tax;
-    return { roomTotal, tax, grandTotal };
-  }, [roomTotals]);
+    const discountAmount = isRepeatCustomer ? (roomTotal * 0.05) : 0;
+    const discountedRoomTotal = roomTotal - discountAmount;
+
+    const tax = discountedRoomTotal * TAX_RATE;
+    const grandTotal = discountedRoomTotal + tax;
+
+    return { roomTotal, discountAmount, discountedRoomTotal, tax, grandTotal };
+  }, [roomTotals, isRepeatCustomer]);
 
   if (!user) {
     return (
@@ -134,7 +146,7 @@ const Booking = () => {
   };
 
   const handleRoomChange = (roomType, quantity) => {
-    const maxAvailable = roomAvailability[roomType]; 
+    const maxAvailable = roomAvailability[roomType];
     if (quantity >= 0 && quantity <= maxAvailable) {
       setSelectedRooms(prev => ({ ...prev, [roomType]: quantity }));
     } else if (quantity > maxAvailable) {
@@ -174,28 +186,29 @@ const Booking = () => {
       ...guestDetails,
       username: user.username,
       checkIn: dates.checkIn,
-      checkOut: dates.checkOut
+      checkOut: dates.checkOut,
+      isRepeatCustomer: isRepeatCustomer
     };
 
     for (const [key, data] of Object.entries(roomTotals.details)) {
       if (data.quantity > 0) {
-        
+
         // Loop for quantity if they booked multiple rooms of the same type
         for (let i = 0; i < data.quantity; i++) {
-            const roomData = {
-              baseType: data.baseType, // E.g., 'single'
-              type: data.name,
-              totalAmount: (data.subtotal / data.quantity) * (1 + TAX_RATE) // Cost per room incl tax
-            };
+          const roomData = {
+            baseType: data.baseType, // E.g., 'single'
+            type: data.name,
+            totalAmount: (data.subtotal / data.quantity) * (1 + TAX_RATE) // Cost per room incl tax
+          };
 
-            // Divide the total amount paid across the rooms for the ledger
-            const perRoomPaid = amountPaid / (Object.values(roomTotals.details).reduce((sum, d) => sum + d.quantity, 0));
+          // Divide the total amount paid across the rooms for the ledger
+          const perRoomPaid = amountPaid / (Object.values(roomTotals.details).reduce((sum, d) => sum + d.quantity, 0));
 
-            try {
-              await addCustomer(finalGuestDetails, roomData, paymentMode, perRoomPaid);
-            } catch (error) {
-              success = false;
-            }
+          try {
+            await addCustomer(finalGuestDetails, roomData, paymentMode, perRoomPaid);
+          } catch (error) {
+            success = false;
+          }
         }
       }
     }
@@ -318,7 +331,7 @@ const Booking = () => {
             <h2 className="text-3xl font-bold mb-8 font-display text-center text-amber-800">Review Your Booking</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <BookingReview dates={dates} nights={nights} roomTotals={roomTotals} finalTotals={finalTotals} guest={guestDetails} />
-              
+
               {/* NEW: Updated Payment Form passing data back up */}
               <PaymentForm finalTotals={finalTotals} onConfirm={handleConfirmBooking} />
             </div>
@@ -485,10 +498,10 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
   const [method, setMethod] = useState('Credit Card');
 
   // Calculate amount to process based on selection
-  const amountToPay = paymentMode === 'OnlineFull' 
-    ? finalTotals.grandTotal 
-    : paymentMode === 'OnlinePartial' 
-      ? finalTotals.grandTotal / 2 
+  const amountToPay = paymentMode === 'OnlineFull'
+    ? finalTotals.grandTotal
+    : paymentMode === 'OnlinePartial'
+      ? finalTotals.grandTotal / 2
       : 0;
 
   return (
@@ -496,10 +509,10 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
       <h3 className="text-2xl font-bold mb-6 font-display text-amber-800 border-b pb-4">
         <i className="fas fa-shield-alt mr-3"></i>Choose Payment Mode
       </h3>
-      
+
       <div className="space-y-4 mb-6">
         {/* Full Payment */}
-        <div 
+        <div
           onClick={() => setPaymentMode('OnlineFull')}
           className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'OnlineFull' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}
         >
@@ -514,7 +527,7 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
         </div>
 
         {/* 50% Advance */}
-        <div 
+        <div
           onClick={() => setPaymentMode('OnlinePartial')}
           className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'OnlinePartial' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
         >
@@ -529,7 +542,7 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
         </div>
 
         {/* Pay at Hotel */}
-        <div 
+        <div
           onClick={() => setPaymentMode('PayAtHotel')}
           className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'PayAtHotel' ? 'border-amber-600 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}
         >
@@ -573,8 +586,8 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
       )}
 
       <div className="mt-auto">
-        <button 
-          onClick={() => onConfirm(paymentMode, amountToPay)} 
+        <button
+          onClick={() => onConfirm(paymentMode, amountToPay)}
           className={`w-full text-white py-4 rounded-xl font-black text-lg transition shadow-xl hover:scale-[1.02] active:scale-[0.98] ${paymentMode === 'PayAtHotel' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}`}
         >
           {paymentMode === 'PayAtHotel' ? (

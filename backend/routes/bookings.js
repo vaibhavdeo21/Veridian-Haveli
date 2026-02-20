@@ -157,4 +157,14 @@ router.get('/analytics', async (req, res) => {
   }
 });
 
+router.delete('/:id', async (req, res) => {
+  try {
+    const deletedBooking = await Booking.findByIdAndDelete(req.params.id);
+    if (!deletedBooking) return res.status(404).json({ message: 'Booking not found' });
+    res.json({ message: 'Customer deleted permanently' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting customer' });
+  }
+});
+
 module.exports = router;

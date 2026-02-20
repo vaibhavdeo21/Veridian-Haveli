@@ -15,6 +15,7 @@ const BookingSchema = new mongoose.Schema({
   amountPaid: { type: Number, default: 0 },
   paymentMode: { type: String, enum: ['PayAtHotel', 'OnlinePartial', 'OnlineFull'], default: 'PayAtHotel' },
   lateNightFee: { type: Number, default: 0 },
+  isRepeatCustomer: { type: Boolean, default: false },
   idDocumentPath: { type: String, default: '' }
 }, { timestamps: true });
 

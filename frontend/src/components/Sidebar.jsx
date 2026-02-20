@@ -10,8 +10,7 @@ const SidebarLink = ({ to, icon, children }) => {
                 to={to}
                 end
                 className={({ isActive }) =>
-                    `sidebar-item flex items-center p-3 rounded-lg transition-colors ${
-                        isActive ? 'bg-amber-50 text-amber-700 font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-amber-600'
+                    `sidebar-item flex items-center p-3 rounded-lg transition-colors ${isActive ? 'bg-amber-50 text-amber-700 font-bold' : 'text-gray-600 hover:bg-gray-50 hover:text-amber-600'
                     }`
                 }
             >
@@ -29,10 +28,9 @@ const Sidebar = ({ isOpen }) => {
 
     return (
         <>
-            <aside 
-                className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg z-40 transition-transform duration-300 ${
-                    isOpen ? 'translate-x-0' : '-translate-x-full'
-                }`}
+            <aside
+                className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+                    }`}
             >
                 <div className="h-full flex flex-col justify-between p-4 overflow-y-auto">
                     <div>
@@ -52,7 +50,7 @@ const Sidebar = ({ isOpen }) => {
                                 <SidebarLink to="/admin/rooms" icon="fa-bed">Booking Rooms</SidebarLink>
                                 <SidebarLink to="/admin/offline-booking" icon="fa-calendar-plus">Offline Booking</SidebarLink>
                                 <SidebarLink to="/admin/orders" icon="fa-utensils">Order Food</SidebarLink>
-                                <SidebarLink to="/admin/customers" icon="fa-users">Customer Details</SidebarLink>
+                                <SidebarLink to="/admin/customers" icon="fa-users">Current Staying Customers</SidebarLink>                                
                                 <SidebarLink to="/admin/update-menu" icon="fa-edit">Update Menu</SidebarLink>
                             </ul>
                         </nav>
@@ -60,16 +58,16 @@ const Sidebar = ({ isOpen }) => {
 
                     <div className="pt-4 border-t space-y-2">
                         {/* NEW: Change Password Button */}
-                        <button 
+                        <button
                             onClick={() => setIsPasswordModalOpen(true)}
                             className="w-full flex items-center p-3 text-gray-600 hover:bg-gray-50 hover:text-amber-600 rounded-lg transition-colors"
                         >
                             <i className="fas fa-key w-6 text-center text-lg"></i>
                             <span className="ml-3 font-semibold">Change Password</span>
                         </button>
-                        
-                        <button 
-                            onClick={logout} 
+
+                        <button
+                            onClick={logout}
                             className="w-full flex items-center p-3 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors"
                         >
                             <i className="fas fa-sign-out-alt w-6 text-center text-lg"></i>
@@ -80,9 +78,9 @@ const Sidebar = ({ isOpen }) => {
             </aside>
 
             {/* Render the modal */}
-            <ChangePasswordModal 
-                isOpen={isPasswordModalOpen} 
-                onClose={() => setIsPasswordModalOpen(false)} 
+            <ChangePasswordModal
+                isOpen={isPasswordModalOpen}
+                onClose={() => setIsPasswordModalOpen(false)}
             />
         </>
     );

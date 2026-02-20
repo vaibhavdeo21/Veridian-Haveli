@@ -121,7 +121,8 @@ export const DataProvider = ({ children }) => {
         paymentStatus: pStatus,
         paymentMode: paymentMode,
         amountPaid: amountPaid || 0,
-        status: 'Booked'
+        status: 'Booked',
+        isRepeatCustomer: guestDetails.isRepeatCustomer // <-- ADD THIS LINE
       };
 
       const res = await axios.post('/api/bookings', bookingPayload);
@@ -237,6 +238,18 @@ export const DataProvider = ({ children }) => {
     } catch (err) {
       console.error("Check-out error:", err);
       showNotification('Check-out failed', 'error');
+    }
+  };
+
+  const deleteCustomer = async (customerId) => {
+    try {
+      await axios.delete(`/api/bookings/${customerId}`);
+      // Remove from local state
+      setCustomers(prev => prev.filter(c => c._id !== customerId && c.id !== customerId));
+      showNotification('Customer permanently deleted from database.', 'success');
+    } catch (err) {
+      console.error("Delete error:", err);
+      showNotification('Failed to delete customer', 'error');
     }
   };
 
@@ -380,6 +393,7 @@ export const DataProvider = ({ children }) => {
     getRoomStats,
     updateRoom,
     deleteRoom,
+    deleteCustomer,
     getCustomerExpenses
   };
 
