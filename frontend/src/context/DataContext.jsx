@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { useNotification } from './NotificationContext.jsx';
-import { useAuth } from './AuthContext.jsx'; // SYNC FIX: Import Auth to update profile
+import { useAuth } from './AuthContext.jsx'; 
 
 const DataContext = createContext();
 
@@ -15,11 +15,9 @@ export const DataProvider = ({ children }) => {
   const [analyticsData, setAnalyticsData] = useState([]);
   const [topSellingFood, setTopSellingFood] = useState([]);
 
-  // FIX: Destructure addLiveNotification to prevent reference errors
   const { showNotification, addLiveNotification } = useNotification();
-  const { updateUserStays } = useAuth(); // SYNC FIX: Access profile update function
+  const { updateUserStays } = useAuth(); 
 
-  // --- 1. FETCH DATA FROM BACKEND ON LOAD ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -86,19 +84,43 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const addCustomer = async (guestDetails, roomData, paymentStatus) => {
+  // --- NEW: GUARANTEED ROOM ASSIGNMENT LOGIC ---
+  const addCustomer = async (guestDetails, roomData, paymentMode, amountPaid) => {
     try {
-      const roomNumToUse = roomData.roomNumber || roomData.roomNo;
-      
+      let finalRoomNumber = `Online-${roomData.baseType.toUpperCase()}`;
+      let physicalRoomIdToLock = null;
+
+      // If they paid online, we MUST lock a real room right now.
+      if (paymentMode !== 'PayAtHotel') {
+        const availableRoom = rooms.find(r => 
+          r.type.toLowerCase().includes(roomData.baseType.toLowerCase()) && 
+          (!r.availability || r.availability === 'Available')
+        );
+
+        if (availableRoom) {
+          finalRoomNumber = availableRoom.roomNumber;
+          physicalRoomIdToLock = availableRoom._id || availableRoom.id;
+        } else {
+          // Fallback if inventory discrepancy occurs during checkout
+          showNotification(`Warning: No physical ${roomData.baseType} rooms left to lock!`, 'error');
+        }
+      }
+
+      let pStatus = 'Pending';
+      if (paymentMode === 'OnlineFull') pStatus = 'Paid';
+      if (paymentMode === 'OnlinePartial') pStatus = 'Partial';
+
       const bookingPayload = {
         guestName: `${guestDetails.firstName} ${guestDetails.lastName}`,
         phone: guestDetails.phone,
         email: guestDetails.email,
-        roomNumber: roomNumToUse,
+        roomNumber: finalRoomNumber,
         checkInDate: guestDetails.checkIn || new Date().toISOString(),
         checkOutDate: guestDetails.checkOut || new Date().toISOString(),
-        totalAmount: roomData.price || roomData.totalAmount,
-        paymentStatus: paymentStatus || 'Pending',
+        totalAmount: roomData.totalAmount,
+        paymentStatus: pStatus,
+        paymentMode: paymentMode,
+        amountPaid: amountPaid || 0,
         status: 'Booked'
       };
 
@@ -107,33 +129,29 @@ export const DataProvider = ({ children }) => {
       if (res.status === 201 || res.status === 200) {
         setCustomers(prev => [res.data, ...prev]);
 
-        // LIVE FEED
         addLiveNotification(
           'New Booking',
-          `Room ${roomNumToUse} booked for ${guestDetails.firstName}`
+          `Room ${finalRoomNumber} booked for ${guestDetails.firstName} (${paymentMode})`
         );
 
-        updateUserStays(res.data);
+        if (updateUserStays) updateUserStays(res.data);
 
-        // SYNC FIX: If a physical room was assigned, lock it in the DB!
-        if (roomNumToUse && !roomNumToUse.includes('Online')) {
-          const bookedRoom = rooms.find(r => String(r.roomNumber) === String(roomNumToUse));
-          if (bookedRoom) {
-            await axios.patch(`/api/rooms/${bookedRoom._id || bookedRoom.id}`, { availability: 'Booked' });
-          }
+        // LOCK THE INVENTORY IN DB AND STATE
+        if (physicalRoomIdToLock) {
+          await axios.patch(`/api/rooms/${physicalRoomIdToLock}`, { availability: 'Booked' });
+          setRooms(prev => prev.map(r =>
+            (r._id === physicalRoomIdToLock || r.id === physicalRoomIdToLock)
+              ? { ...r, availability: 'Booked' }
+              : r
+          ));
         }
 
-        setRooms(prev => prev.map(r =>
-          r.roomNumber === roomNumToUse
-            ? { ...r, availability: 'Booked' }
-            : r
-        ));
-
-        showNotification('Booking Confirmed and Added to List!', 'success');
+        showNotification('Booking Confirmed!', 'success');
       }
     } catch (err) {
       console.error("Booking Error:", err.response?.data || err.message);
       showNotification('Failed to add booking to database', 'error');
+      throw err; // Rethrow to handle in Booking.jsx
     }
   };
 
@@ -141,50 +159,58 @@ export const DataProvider = ({ children }) => {
     setCustomers(prev => prev.map(c => (c.id === customerId || c._id === customerId) ? { ...c, paymentStatus: status } : c));
   };
 
-  // --- UPDATED CHECK-IN FUNCTIONALITY ---
+  // --- NEW: LATE NIGHT CHECK-IN LOGIC ---
   const checkInCustomer = async (customerId, physicalRoomNo) => {
     try {
-      // 1. Update status AND roomNumber in MongoDB Bookings
+      // Check current time for late night fee (11:00 PM to 6:00 AM)
+      const currentHour = new Date().getHours();
+      let lateNightFee = 0;
+      if (currentHour >= 23 || currentHour < 6) {
+        lateNightFee = 249;
+      }
+
+      // Update status, roomNumber, AND apply late fee in MongoDB
       await axios.patch(`/api/bookings/${customerId}`, { 
         status: 'CheckedIn',
-        roomNumber: physicalRoomNo 
+        roomNumber: physicalRoomNo,
+        lateNightFee: lateNightFee
       });
 
-      // 2. SYNC FIX: Update the Room availability in MongoDB
       const assignedRoom = rooms.find(r => String(r.roomNumber) === String(physicalRoomNo));
       if (assignedRoom) {
         await axios.patch(`/api/rooms/${assignedRoom._id || assignedRoom.id}`, { availability: 'Booked' });
       }
 
-      // 3. Update local Customer state
       setCustomers(prev => prev.map(c =>
         (c.id === customerId || c._id === customerId) 
-          ? { ...c, status: 'CheckedIn', roomNumber: physicalRoomNo } 
+          ? { ...c, status: 'CheckedIn', roomNumber: physicalRoomNo, lateNightFee: lateNightFee } 
           : c
       ));
 
-      // 4. Update local Room state
       setRooms(prev => prev.map(r =>
         String(r.roomNumber) === String(physicalRoomNo) ? { ...r, availability: 'Booked' } : r
       ));
 
       addLiveNotification('Check-In', `Guest checked into Room ${physicalRoomNo}`);
-      showNotification(`Guest checked into Room ${physicalRoomNo}`, 'success');
+      
+      if (lateNightFee > 0) {
+        showNotification(`Guest checked in. Late night fee of ₹249 applied.`, 'success');
+      } else {
+        showNotification(`Guest checked into Room ${physicalRoomNo}`, 'success');
+      }
+      
     } catch (err) {
       console.error("Check-in error:", err);
       showNotification('Check-in failed: Verify backend PATCH route', 'error');
     }
   };
 
-  // --- UPDATED CHECK-OUT FUNCTIONALITY ---
   const checkOutCustomer = async (customerId, lateFeeAmount = 0) => {
     try {
       const customer = customers.find(c => c._id === customerId || c.id === customerId);
 
-      // 1. Update the booking status in the database to CheckedOut
       await axios.patch(`/api/bookings/${customerId}`, { status: 'CheckedOut' });
 
-      // 2. SYNC FIX: Update the Room availability to Maintenance in MongoDB
       if (customer && customer.roomNumber && !customer.roomNumber.includes('Online')) {
         const vacatedRoom = rooms.find(r => String(r.roomNumber) === String(customer.roomNumber));
         if (vacatedRoom) {
@@ -194,7 +220,7 @@ export const DataProvider = ({ children }) => {
 
       setCustomers(prev => prev.map(c => {
         if (c.id === customerId || c._id === customerId) {
-          const newTotal = (c.totalAmount || 0) + (customer.foodCharges || 0) + lateFeeAmount;
+          const newTotal = (c.totalAmount || 0) + (customer.foodCharges || 0) + lateFeeAmount + (c.lateNightFee || 0);
           return { ...c, status: 'CheckedOut', totalAmount: newTotal, lateFee: lateFeeAmount };
         }
         return c;
@@ -287,7 +313,6 @@ export const DataProvider = ({ children }) => {
     setOrders(prev => prev.filter(o => o.id !== orderId));
   };
 
-  // SYNC FIX: Ensure stats accurately reflect the string names used
   const getRoomStats = () => ({
     totalRooms: rooms.length,
     availableRooms: rooms.filter(r => !r.availability || r.availability === 'Available').length,
@@ -310,7 +335,6 @@ export const DataProvider = ({ children }) => {
     return { foodOrders, roomCharge };
   };
 
-  // SYNC FIX: Make sure manual dropdown changes on the dashboard save to the database!
   const updateRoom = async (roomId, field, value) => {
     try {
       await axios.patch(`/api/rooms/${roomId}`, { [field]: value });

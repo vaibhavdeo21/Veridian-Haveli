@@ -4,7 +4,6 @@ import { useData } from '../context/DataContext';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext'; 
 
-// --- Config ---
 const roomConfig = {
   single: { name: 'Single Bed Room', price: 2500 },
   double: { name: 'Double Bed Room', price: 4000 },
@@ -14,7 +13,6 @@ const roomConfig = {
 
 const TAX_RATE = 0.18;
 
-// --- Helper Functions ---
 const getToday = () => new Date().toISOString().split('T')[0];
 const getTomorrow = () => {
   const tomorrow = new Date();
@@ -50,18 +48,13 @@ const Booking = () => {
     requests: '',
   });
 
-  // --- THE FIX: Calculate real availability by checking status ---
   const roomAvailability = useMemo(() => {
     const counts = { single: 0, double: 0, triple: 0, dormitory: 0 };
     if (Array.isArray(rooms)) {
       rooms.forEach(room => {
-        // 1. Check if the room is actually available
         const isAvailable = !room.availability || room.availability.toLowerCase() === 'available';
-        
-        // 2. Only count it if it's available
         if (isAvailable) {
           const type = (room.type || '').toLowerCase();
-          // Using .includes() to make sure we catch "Single", "Single Bed", etc.
           if (type.includes('single')) counts.single++;
           else if (type.includes('double')) counts.double++;
           else if (type.includes('triple')) counts.triple++;
@@ -72,12 +65,10 @@ const Booking = () => {
     return counts;
   }, [rooms]);
 
-  // --- Auto-scroll to top whenever the step changes ---
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  // --- Derived State & Memos ---
   const nights = useMemo(() => {
     if (!dates.checkIn || !dates.checkOut) return 0;
     const checkIn = new Date(dates.checkIn);
@@ -99,6 +90,7 @@ const Booking = () => {
           ...roomConfig[key],
           quantity,
           subtotal,
+          baseType: key // Pass base type to easily match later
         };
       }
     }
@@ -112,7 +104,6 @@ const Booking = () => {
     return { roomTotal, tax, grandTotal };
   }, [roomTotals]);
 
-  // --- Block Unauthenticated Users ---
   if (!user) {
     return (
       <main className="pt-32 pb-16 text-center min-h-[70vh] flex flex-col items-center justify-center bg-gray-50">
@@ -133,7 +124,6 @@ const Booking = () => {
     );
   }
 
-  // --- Event Handlers ---
   const handleDateChange = (e) => {
     const { id, value } = e.target;
     const newDates = { ...dates, [id]: value };
@@ -177,7 +167,8 @@ const Booking = () => {
     goToStep(3);
   };
 
-  const handleConfirmBooking = async () => {
+  // --- NEW: Handle Booking Submit with Payment Modes ---
+  const handleConfirmBooking = async (paymentMode, amountPaid) => {
     let success = true;
     const finalGuestDetails = {
       ...guestDetails,
@@ -188,25 +179,30 @@ const Booking = () => {
 
     for (const [key, data] of Object.entries(roomTotals.details)) {
       if (data.quantity > 0) {
-        const roomData = {
-          roomNo: `Online-${key.toUpperCase()}`,
-          type: data.name,
-          price: data.price,
-          totalAmount: data.subtotal
-        };
+        
+        // Loop for quantity if they booked multiple rooms of the same type
+        for (let i = 0; i < data.quantity; i++) {
+            const roomData = {
+              baseType: data.baseType, // E.g., 'single'
+              type: data.name,
+              totalAmount: (data.subtotal / data.quantity) * (1 + TAX_RATE) // Cost per room incl tax
+            };
 
-        try {
-          await addCustomer(finalGuestDetails, roomData, 'Paid');
-        } catch (error) {
-          console.error("Booking error", error);
-          success = false;
+            // Divide the total amount paid across the rooms for the ledger
+            const perRoomPaid = amountPaid / (Object.values(roomTotals.details).reduce((sum, d) => sum + d.quantity, 0));
+
+            try {
+              await addCustomer(finalGuestDetails, roomData, paymentMode, perRoomPaid);
+            } catch (error) {
+              success = false;
+            }
         }
       }
     }
 
     if (success) {
       updateActiveBooking('Online');
-      showNotification('Thank you! Your booking has been confirmed. Check your Profile.', 'success');
+      showNotification(`Thank you! Your booking is confirmed. Mode: ${paymentMode.replace(/([A-Z])/g, ' $1').trim()}`, 'success');
       setSelectedRooms({ single: 0, double: 0, triple: 0, dormitory: 0 });
       setDates({ checkIn: getToday(), checkOut: getTomorrow() });
       setGuestDetails({ firstName: '', lastName: '', email: '', phone: '', address: '', city: '', state: '', zip: '', requests: '' });
@@ -222,9 +218,9 @@ const Booking = () => {
         <div className="text-center mb-10">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display text-amber-800">Book Your Stay</h1>
           <p className="text-gray-600 max-w-2xl mx-auto">Select from real-time available rooms managed by our front desk</p>
+          <p className="text-xs font-bold mt-2 text-amber-700">Check-in: 12:00 PM | Check-out: 11:00 AM</p>
         </div>
 
-        {/* Professional Horizontal Step Indicator */}
         <div className="mb-12">
           <div className="flex items-center justify-between max-w-3xl mx-auto relative">
             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 -translate-y-1/2 z-0"></div>
@@ -249,8 +245,6 @@ const Booking = () => {
             ))}
           </div>
         </div>
-
-        {/* --- Content Swap via Conditional Rendering --- */}
 
         {currentStep === 1 && (
           <div className="animate-fadeIn">
@@ -324,6 +318,8 @@ const Booking = () => {
             <h2 className="text-3xl font-bold mb-8 font-display text-center text-amber-800">Review Your Booking</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <BookingReview dates={dates} nights={nights} roomTotals={roomTotals} finalTotals={finalTotals} guest={guestDetails} />
+              
+              {/* NEW: Updated Payment Form passing data back up */}
               <PaymentForm finalTotals={finalTotals} onConfirm={handleConfirmBooking} />
             </div>
             <div className="flex justify-between mt-8">
@@ -483,42 +479,109 @@ const BookingReview = ({ dates, nights, roomTotals, finalTotals, guest }) => (
   </div>
 );
 
+// --- NEW: Dynamic Payment Options Component ---
 const PaymentForm = ({ finalTotals, onConfirm }) => {
-  const [paymentMethod, setPaymentMethod] = useState('Credit Card');
+  const [paymentMode, setPaymentMode] = useState('OnlineFull');
+  const [method, setMethod] = useState('Credit Card');
+
+  // Calculate amount to process based on selection
+  const amountToPay = paymentMode === 'OnlineFull' 
+    ? finalTotals.grandTotal 
+    : paymentMode === 'OnlinePartial' 
+      ? finalTotals.grandTotal / 2 
+      : 0;
+
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 flex flex-col h-full">
-      <h3 className="text-2xl font-bold mb-8 font-display text-amber-800 border-b pb-4">
-        <i className="fas fa-shield-alt mr-3"></i>Secure Payment
+      <h3 className="text-2xl font-bold mb-6 font-display text-amber-800 border-b pb-4">
+        <i className="fas fa-shield-alt mr-3"></i>Choose Payment Mode
       </h3>
-      <div className="mb-8">
-        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Payment Method</label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { m: 'Credit Card', i: 'fa-credit-card' },
-            { m: 'Google Pay', i: 'fab fa-google-pay' },
-            { m: 'UPI', i: 'fa-mobile-alt' },
-            { m: 'Wallet', i: 'fa-wallet' }
-          ].map(item => (
-            <div
-              key={item.m}
-              onClick={() => setPaymentMethod(item.m)}
-              className={`border-2 rounded-xl p-4 text-center cursor-pointer transition-all ${paymentMethod === item.m ? 'border-amber-600 bg-amber-50 ring-4 ring-amber-50' : 'border-gray-100 hover:border-gray-200'}`}
-            >
-              <i className={`fas ${item.i} text-2xl mb-2 ${paymentMethod === item.m ? 'text-amber-600' : 'text-gray-400'}`}></i>
-              <p className="text-[10px] font-black uppercase tracking-tighter">{item.m}</p>
+      
+      <div className="space-y-4 mb-6">
+        {/* Full Payment */}
+        <div 
+          onClick={() => setPaymentMode('OnlineFull')}
+          className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'OnlineFull' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <input type="radio" checked={paymentMode === 'OnlineFull'} readOnly className="text-green-600" />
+              <span className="font-bold text-gray-800">Pay Full Amount</span>
             </div>
-          ))}
+            <span className="font-black text-green-700">₹{finalTotals.grandTotal.toLocaleString()}</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 ml-7">Room is instantly locked and assigned.</p>
+        </div>
+
+        {/* 50% Advance */}
+        <div 
+          onClick={() => setPaymentMode('OnlinePartial')}
+          className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'OnlinePartial' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <input type="radio" checked={paymentMode === 'OnlinePartial'} readOnly className="text-blue-600" />
+              <span className="font-bold text-gray-800">Pay 50% Advance</span>
+            </div>
+            <span className="font-black text-blue-700">₹{(finalTotals.grandTotal / 2).toLocaleString()}</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 ml-7">Room is instantly locked and assigned. Pay rest at check-in.</p>
+        </div>
+
+        {/* Pay at Hotel */}
+        <div 
+          onClick={() => setPaymentMode('PayAtHotel')}
+          className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'PayAtHotel' ? 'border-amber-600 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}
+        >
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <input type="radio" checked={paymentMode === 'PayAtHotel'} readOnly className="text-amber-600" />
+              <span className="font-bold text-gray-800">Pay at Hotel</span>
+            </div>
+            <span className="font-black text-gray-500">₹0 Now</span>
+          </div>
+          {paymentMode === 'PayAtHotel' && (
+            <div className="mt-3 ml-7 bg-red-100 text-red-800 p-3 rounded-lg text-xs font-bold leading-relaxed border border-red-200">
+              <i className="fas fa-exclamation-triangle mr-2"></i>
+              You are choosing Pay at Hotel. Room availability is subject to availability at the time of arrival. To confirm and lock your room, please pay an advance now.
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="mt-auto">
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-xl mb-6">
-          <p className="text-xs text-red-800 font-bold leading-relaxed italic">
-            POLICIES: No refunds will be issued for online bookings at Jhankar Hotel.
-          </p>
+      {paymentMode !== 'PayAtHotel' && (
+        <div className="mb-6 animate-fadeIn">
+          <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Online Payment Method</label>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { m: 'Card', i: 'fa-credit-card' },
+              { m: 'GPay', i: 'fab fa-google-pay' },
+              { m: 'UPI', i: 'fa-mobile-alt' },
+              { m: 'Wallet', i: 'fa-wallet' }
+            ].map(item => (
+              <div
+                key={item.m}
+                onClick={() => setMethod(item.m)}
+                className={`border-2 rounded-lg py-2 text-center cursor-pointer transition-all ${method === item.m ? 'border-green-600 bg-green-50 ring-2 ring-green-50' : 'border-gray-100 hover:border-gray-200'}`}
+              >
+                <i className={`fas ${item.i} text-lg mb-1 ${method === item.m ? 'text-green-600' : 'text-gray-400'}`}></i>
+                <p className="text-[9px] font-black uppercase">{item.m}</p>
+              </div>
+            ))}
+          </div>
         </div>
-        <button onClick={onConfirm} className="w-full bg-green-600 hover:bg-green-700 text-white py-5 rounded-2xl font-black text-xl transition shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-          <i className="fas fa-lock mr-3"></i>CONFIRM & PAY ₹{finalTotals.grandTotal.toLocaleString()}
+      )}
+
+      <div className="mt-auto">
+        <button 
+          onClick={() => onConfirm(paymentMode, amountToPay)} 
+          className={`w-full text-white py-4 rounded-xl font-black text-lg transition shadow-xl hover:scale-[1.02] active:scale-[0.98] ${paymentMode === 'PayAtHotel' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}`}
+        >
+          {paymentMode === 'PayAtHotel' ? (
+            <>RESERVE WITHOUT LOCKING</>
+          ) : (
+            <><i className="fas fa-lock mr-2"></i>CONFIRM & PAY ₹{amountToPay.toLocaleString()}</>
+          )}
         </button>
       </div>
     </div>

@@ -1,4 +1,3 @@
-// models/Booking.js
 const mongoose = require('mongoose');
 
 const BookingSchema = new mongoose.Schema({
@@ -10,10 +9,12 @@ const BookingSchema = new mongoose.Schema({
   checkOutDate: { type: Date, required: true },
   totalAmount: Number,
   status: { type: String, enum: ['Booked', 'CheckedIn', 'CheckedOut', 'Cancelled'], default: 'Booked' },
-  paymentStatus: { type: String, enum: ['Pending', 'Paid'], default: 'Pending' },
+  paymentStatus: { type: String, enum: ['Pending', 'Partial', 'Paid'], default: 'Pending' },
   
-  // --- NEW FIELDS FOR CUSTOMER PROFILE ---
+  // --- NEW FIELDS ---
   amountPaid: { type: Number, default: 0 },
+  paymentMode: { type: String, enum: ['PayAtHotel', 'OnlinePartial', 'OnlineFull'], default: 'PayAtHotel' },
+  lateNightFee: { type: Number, default: 0 },
   idDocumentPath: { type: String, default: '' }
 }, { timestamps: true });
 
