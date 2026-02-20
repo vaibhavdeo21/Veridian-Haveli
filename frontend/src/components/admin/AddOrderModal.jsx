@@ -3,7 +3,8 @@ import { useData } from '../../context/DataContext.jsx';
 import { useNotification } from '../../context/NotificationContext.jsx';
 
 const AddOrderModal = ({ isOpen, onClose }) => {
-  const { addOrder } = useData();
+  // NEW: Extracted customers from useData to allow searching
+  const { addOrder, customers } = useData();
   const { showNotification } = useNotification();
   const [formData, setFormData] = useState({
     roomNo: '',
@@ -15,7 +16,32 @@ const AddOrderModal = ({ isOpen, onClose }) => {
 
   const handleChange = (e) => {
     const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+    
+    setFormData(prev => {
+      const newData = { ...prev, [id]: value };
+
+      // NEW: Auto-fill logic for Customer Name based on Room Number
+      if (id === 'roomNo') {
+        const typedRoomNo = String(value).trim();
+        
+        // Search for a guest who is checked into this specific room
+        const matchedCustomer = customers.find(c => 
+          String(c.roomNumber) === typedRoomNo && 
+          (c.status || "").replace(/\s/g, "").toLowerCase() === 'checkedin'
+        );
+
+        if (matchedCustomer) {
+          // If found, auto-fill their name
+          newData.customerName = matchedCustomer.guestName;
+        } else {
+          // If no match is found (or room is empty), clear the name field 
+          // so the admin doesn't accidentally bill the wrong person
+          newData.customerName = '';
+        }
+      }
+
+      return newData;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -58,7 +84,7 @@ const AddOrderModal = ({ isOpen, onClose }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-              <input type="text" id="customerName" value={formData.customerName} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              <input type="text" id="customerName" value={formData.customerName} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required placeholder="Auto-fills if room is occupied..." />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Food Items</label>

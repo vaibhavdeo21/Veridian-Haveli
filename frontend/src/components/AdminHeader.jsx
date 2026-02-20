@@ -2,16 +2,26 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext.jsx'; // FIX: Import live feed context
 
-const AdminHeader = () => {
+// NEW: Accept toggleSidebar as a prop
+const AdminHeader = ({ toggleSidebar }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const { liveFeed, clearFeed } = useNotification(); // FIX: Access real-time data
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white text-gray-800 shadow-md z-50 pl-20 lg:pl-64 pr-6 transition-all duration-300">
+    <header className="fixed top-0 left-0 right-0 bg-white text-gray-800 shadow-md z-50 px-4 md:px-6 transition-all duration-300">
       <div className="grid grid-cols-3 items-center h-16">
         
-        {/* 1. Left Section: Exact Logo Styling */}
-        <div className="flex items-center justify-start">
+        {/* 1. Left Section: Hamburger Menu + Exact Logo Styling */}
+        <div className="flex items-center justify-start space-x-3">
+          
+          {/* NEW: Hamburger Button */}
+          <button 
+            onClick={toggleSidebar} 
+            className="text-gray-500 hover:text-[#a35d14] focus:outline-none p-2 rounded-lg hover:bg-orange-50 transition-colors"
+          >
+            <i className="fas fa-bars text-xl"></i>
+          </button>
+
           <Link to="/" className="flex items-center space-x-2">
             <div className="bg-[#a35d14] text-white w-9 h-9 rounded-md flex items-center justify-center font-bold text-lg">
               JH
@@ -24,7 +34,7 @@ const AdminHeader = () => {
 
         {/* 2. Center Section: Admin Dashboard Title */}
         <div className="flex items-center justify-center">
-          <span className="text-sm font-black text-[#a35d14] uppercase tracking-widest text-center">
+          <span className="text-sm font-black text-[#a35d14] uppercase tracking-widest text-center hidden md:block">
             Hotel Admin Dashboard
           </span>
         </div>

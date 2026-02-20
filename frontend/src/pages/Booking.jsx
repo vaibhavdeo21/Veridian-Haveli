@@ -2,9 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useNotification } from '../context/NotificationContext';
-import { useAuth } from '../context/AuthContext'; // Added Auth Hook
+import { useAuth } from '../context/AuthContext'; 
 
-// --- Config (Names and Base Prices remain, but 'max' is now handled dynamically) ---
+// --- Config ---
 const roomConfig = {
   single: { name: 'Single Bed Room', price: 2500 },
   double: { name: 'Double Bed Room', price: 4000 },
@@ -23,9 +23,9 @@ const getTomorrow = () => {
 };
 
 const Booking = () => {
-  const { addCustomer, rooms } = useData(); // Destructure rooms from context for real-time inventory
+  const { addCustomer, rooms } = useData(); 
   const { showNotification } = useNotification();
-  const { user, updateActiveBooking } = useAuth(); // Destructure auth
+  const { user, updateActiveBooking } = useAuth(); 
 
   const [currentStep, setCurrentStep] = useState(1);
   const [dates, setDates] = useState({
@@ -50,18 +50,23 @@ const Booking = () => {
     requests: '',
   });
 
-  // --- NEW: Calculate real availability from Admin Inventory ---
+  // --- THE FIX: Calculate real availability by checking status ---
   const roomAvailability = useMemo(() => {
     const counts = { single: 0, double: 0, triple: 0, dormitory: 0 };
     if (Array.isArray(rooms)) {
       rooms.forEach(room => {
-        // Treat rooms without active bookings as available
-        // Match the type exactly as it appears in your database: "Single", "Double", etc.
-        const type = (room.type || '').toLowerCase();
-        if (type === 'single') counts.single++;
-        else if (type === 'double') counts.double++;
-        else if (type === 'triple') counts.triple++;
-        else if (type === 'dormitory') counts.dormitory++;
+        // 1. Check if the room is actually available
+        const isAvailable = !room.availability || room.availability.toLowerCase() === 'available';
+        
+        // 2. Only count it if it's available
+        if (isAvailable) {
+          const type = (room.type || '').toLowerCase();
+          // Using .includes() to make sure we catch "Single", "Single Bed", etc.
+          if (type.includes('single')) counts.single++;
+          else if (type.includes('double')) counts.double++;
+          else if (type.includes('triple')) counts.triple++;
+          else if (type.includes('dorm')) counts.dormitory++;
+        }
       });
     }
     return counts;
@@ -139,11 +144,11 @@ const Booking = () => {
   };
 
   const handleRoomChange = (roomType, quantity) => {
-    const maxAvailable = roomAvailability[roomType]; // Use dynamic count from Admin inventory
+    const maxAvailable = roomAvailability[roomType]; 
     if (quantity >= 0 && quantity <= maxAvailable) {
       setSelectedRooms(prev => ({ ...prev, [roomType]: quantity }));
     } else if (quantity > maxAvailable) {
-      showNotification(`Only ${maxAvailable} ${roomType} rooms are currently available in inventory.`, 'error');
+      showNotification(`Only ${maxAvailable} ${roomType} rooms are currently available.`, 'error');
     }
   };
 
@@ -191,7 +196,6 @@ const Booking = () => {
         };
 
         try {
-          // Call API via Context
           await addCustomer(finalGuestDetails, roomData, 'Paid');
         } catch (error) {
           console.error("Booking error", error);
