@@ -21,7 +21,7 @@ const getTomorrow = () => {
 };
 
 const Booking = () => {
-  const { addCustomer, rooms } = useData();
+  const { addCustomer, rooms, customers } = useData();
   const { showNotification } = useNotification();
   const { user, updateActiveBooking } = useAuth();
 
@@ -55,7 +55,7 @@ const Booking = () => {
       c.username === user.username
     );
   }, [user, customers]);
-  
+
   const roomAvailability = useMemo(() => {
     const counts = { single: 0, double: 0, triple: 0, dormitory: 0 };
     if (Array.isArray(rooms)) {
