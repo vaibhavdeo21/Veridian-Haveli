@@ -88,11 +88,13 @@ export const DataProvider = ({ children }) => {
 
   const addCustomer = async (guestDetails, roomData, paymentStatus) => {
     try {
+      const roomNumToUse = roomData.roomNumber || roomData.roomNo;
+      
       const bookingPayload = {
         guestName: `${guestDetails.firstName} ${guestDetails.lastName}`,
         phone: guestDetails.phone,
         email: guestDetails.email,
-        roomNumber: roomData.roomNumber || roomData.roomNo,
+        roomNumber: roomNumToUse,
         checkInDate: guestDetails.checkIn || new Date().toISOString(),
         checkOutDate: guestDetails.checkOut || new Date().toISOString(),
         totalAmount: roomData.price || roomData.totalAmount,
@@ -105,17 +107,24 @@ export const DataProvider = ({ children }) => {
       if (res.status === 201 || res.status === 200) {
         setCustomers(prev => [res.data, ...prev]);
 
-        // LIVE FEED: Broadcast new booking to Admin Dashboard
+        // LIVE FEED
         addLiveNotification(
           'New Booking',
-          `Room ${roomData.roomNumber || roomData.roomNo} booked for ${guestDetails.firstName}`
+          `Room ${roomNumToUse} booked for ${guestDetails.firstName}`
         );
 
-        // SYNC FIX: Update the user's local profile to show the new active stay
         updateUserStays(res.data);
 
+        // SYNC FIX: If a physical room was assigned, lock it in the DB!
+        if (roomNumToUse && !roomNumToUse.includes('Online')) {
+          const bookedRoom = rooms.find(r => String(r.roomNumber) === String(roomNumToUse));
+          if (bookedRoom) {
+            await axios.patch(`/api/rooms/${bookedRoom._id || bookedRoom.id}`, { availability: 'Booked' });
+          }
+        }
+
         setRooms(prev => prev.map(r =>
-          r.roomNumber === (roomData.roomNumber || roomData.roomNo)
+          r.roomNumber === roomNumToUse
             ? { ...r, availability: 'Booked' }
             : r
         ));
@@ -135,23 +144,28 @@ export const DataProvider = ({ children }) => {
   // --- UPDATED CHECK-IN FUNCTIONALITY ---
   const checkInCustomer = async (customerId, physicalRoomNo) => {
     try {
-      // 1. Update status AND roomNumber in MongoDB
-      // This moves them from "Room Online-SINGLE" to a real room
+      // 1. Update status AND roomNumber in MongoDB Bookings
       await axios.patch(`/api/bookings/${customerId}`, { 
         status: 'CheckedIn',
         roomNumber: physicalRoomNo 
       });
 
-      // 2. Update local Customer state
+      // 2. SYNC FIX: Update the Room availability in MongoDB
+      const assignedRoom = rooms.find(r => String(r.roomNumber) === String(physicalRoomNo));
+      if (assignedRoom) {
+        await axios.patch(`/api/rooms/${assignedRoom._id || assignedRoom.id}`, { availability: 'Booked' });
+      }
+
+      // 3. Update local Customer state
       setCustomers(prev => prev.map(c =>
         (c.id === customerId || c._id === customerId) 
           ? { ...c, status: 'CheckedIn', roomNumber: physicalRoomNo } 
           : c
       ));
 
-      // 3. Mark physical room as Booked in inventory
+      // 4. Update local Room state
       setRooms(prev => prev.map(r =>
-        r.roomNumber === physicalRoomNo ? { ...r, availability: 'Booked' } : r
+        String(r.roomNumber) === String(physicalRoomNo) ? { ...r, availability: 'Booked' } : r
       ));
 
       addLiveNotification('Check-In', `Guest checked into Room ${physicalRoomNo}`);
@@ -163,28 +177,35 @@ export const DataProvider = ({ children }) => {
   };
 
   // --- UPDATED CHECK-OUT FUNCTIONALITY ---
-  // src/context/DataContext.jsx
-
   const checkOutCustomer = async (customerId, lateFeeAmount = 0) => {
     try {
+      const customer = customers.find(c => c._id === customerId || c.id === customerId);
+
       // 1. Update the booking status in the database to CheckedOut
       await axios.patch(`/api/bookings/${customerId}`, { status: 'CheckedOut' });
+
+      // 2. SYNC FIX: Update the Room availability to Maintenance in MongoDB
+      if (customer && customer.roomNumber && !customer.roomNumber.includes('Online')) {
+        const vacatedRoom = rooms.find(r => String(r.roomNumber) === String(customer.roomNumber));
+        if (vacatedRoom) {
+          await axios.patch(`/api/rooms/${vacatedRoom._id || vacatedRoom.id}`, { availability: 'Maintenance' });
+        }
+      }
 
       setCustomers(prev => prev.map(c => {
         if (c.id === customerId || c._id === customerId) {
           const newTotal = (c.totalAmount || 0) + (customer.foodCharges || 0) + lateFeeAmount;
-
-          // 2. Mark room as 'Maintenance' locally for cleaning
-          setRooms(roomPrev => roomPrev.map(r =>
-            r.roomNumber === c.roomNumber ? { ...r, availability: 'Maintenance' } : r
-          ));
-
           return { ...c, status: 'CheckedOut', totalAmount: newTotal, lateFee: lateFeeAmount };
         }
         return c;
       }));
 
-      // 3. Notify the admin
+      setRooms(prev => prev.map(r =>
+        String(r.roomNumber) === String(customer?.roomNumber) 
+          ? { ...r, availability: 'Maintenance' } 
+          : r
+      ));
+
       addLiveNotification('Housekeeping Required', `Room cleaning needed for checked-out guest.`);
       showNotification('Guest checked out. Room moved to Maintenance.', 'success');
     } catch (err) {
@@ -251,7 +272,6 @@ export const DataProvider = ({ children }) => {
           : c
       ));
 
-      // LIVE FEED: Broadcast food order to Admin Dashboard
       addLiveNotification(
         'Food Order',
         `Room ${orderData.roomNo}: ${orderData.foodItems}`
@@ -267,10 +287,11 @@ export const DataProvider = ({ children }) => {
     setOrders(prev => prev.filter(o => o.id !== orderId));
   };
 
+  // SYNC FIX: Ensure stats accurately reflect the string names used
   const getRoomStats = () => ({
     totalRooms: rooms.length,
-    availableRooms: rooms.filter(r => r.availability !== 'Booked').length,
-    bookedRooms: rooms.filter(r => r.availability === 'Booked').length
+    availableRooms: rooms.filter(r => !r.availability || r.availability === 'Available').length,
+    bookedRooms: rooms.filter(r => r.availability === 'Booked' || r.availability === 'Maintenance').length
   });
 
   const getCustomerExpenses = (roomNo) => {
@@ -289,11 +310,15 @@ export const DataProvider = ({ children }) => {
     return { foodOrders, roomCharge };
   };
 
+  // SYNC FIX: Make sure manual dropdown changes on the dashboard save to the database!
   const updateRoom = async (roomId, field, value) => {
     try {
+      await axios.patch(`/api/rooms/${roomId}`, { [field]: value });
       setRooms(prev => prev.map(r => (r.id === roomId || r._id === roomId) ? { ...r, [field]: value } : r));
+      showNotification(`Room ${field} updated successfully`, 'success');
     } catch (err) {
-      console.error(err);
+      console.error("Update room error:", err);
+      showNotification('Failed to update room status in database', 'error');
     }
   };
 

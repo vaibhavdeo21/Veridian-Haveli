@@ -84,7 +84,7 @@ router.post('/:id/upload-id', upload.single('idFile'), async (req, res) => {
     const updatedBooking = await Booking.findByIdAndUpdate(
       req.params.id,
       { idDocumentPath: documentPath },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!updatedBooking) {
@@ -104,7 +104,7 @@ router.patch('/:id', async (req, res) => {
     const updatedBooking = await Booking.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!updatedBooking) {

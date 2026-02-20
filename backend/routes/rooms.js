@@ -43,4 +43,30 @@ router.post('/', upload.single('image'), async (req, res) => {
   }
 });
 
+// --- NEW FIX: Add PATCH route to update Room Availability ---
+// @route   PATCH api/rooms/:id
+router.patch('/:id', async (req, res) => {
+  try {
+    const updatedRoom = await Room.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body }, 
+      { returnDocument: 'after' }
+    );
+    if (!updatedRoom) return res.status(404).json({ message: 'Room not found' });
+    res.json(updatedRoom);
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating room' });
+  }
+});
+
+// DELETE room (assuming you might need this since DataContext calls it)
+router.delete('/:id', async (req, res) => {
+  try {
+    await Room.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Room deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting room' });
+  }
+});
+
 module.exports = router;
