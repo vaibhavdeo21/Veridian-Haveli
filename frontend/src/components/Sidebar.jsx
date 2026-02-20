@@ -50,7 +50,7 @@ const Sidebar = ({ isOpen }) => {
                                 <SidebarLink to="/admin/rooms" icon="fa-bed">Booking Rooms</SidebarLink>
                                 <SidebarLink to="/admin/offline-booking" icon="fa-calendar-plus">Offline Booking</SidebarLink>
                                 <SidebarLink to="/admin/orders" icon="fa-utensils">Order Food</SidebarLink>
-                                <SidebarLink to="/admin/customers" icon="fa-users">Current Staying Customers</SidebarLink>                                
+                                <SidebarLink to="/admin/customers" icon="fa-users">Customers</SidebarLink>                                
                                 <SidebarLink to="/admin/update-menu" icon="fa-edit">Update Menu</SidebarLink>
                             </ul>
                         </nav>
