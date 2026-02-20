@@ -57,13 +57,22 @@ router.post('/login', async (req, res) => {
 });
 
 // @route   PUT api/auth/change-password
-// @desc    Change password from Profile (Used by Admin to change pre-set password)
+// @desc    Change password securely by verifying the current password
 router.put('/change-password', auth, async (req, res) => {
-  const { newPassword } = req.body;
+  // NEW: Require both current and new passwords from the frontend
+  const { currentPassword, newPassword } = req.body;
+  
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
+    // NEW: Verify the current password matches what is in the database
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ msg: 'Incorrect current password' });
+    }
+
+    // Hash and save the new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
     
