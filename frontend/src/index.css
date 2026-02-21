@@ -135,3 +135,41 @@ header.scrolled{
 .btn-block{
   width:100%;
 }
+/* ===== GOLD SHIMMER EFFECT ===== */
+
+.gold-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.gold-shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(212,175,55,0.08) 20%,
+    rgba(255,215,120,0.35) 40%,
+    rgba(212,175,55,0.08) 60%,
+    transparent 100%
+  );
+  filter: blur(6px);
+}
+
+.gold-shimmer.active::after {
+  animation: shimmerMove 2.8s ease-in-out infinite;
+}
+
+@keyframes shimmerMove {
+  0% { left: -120%; }
+  100% { left: 130%; }
+}
+/* Prevent any hide-on-scroll behavior */
+header {
+  transform: translateY(0) !important;
+  top: 0 !important;
+}

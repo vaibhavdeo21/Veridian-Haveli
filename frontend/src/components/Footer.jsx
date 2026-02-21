@@ -3,25 +3,44 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
-    <footer className="bg-haveli-deep text-white/90 pt-20 pb-10 border-t-4 border-haveli-accent">
-      <div className="container mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
-          
-          {/* Left Section: Branding & Info */}
+    <footer className="bg-haveli-deep text-white/90 pt-24 pb-10 border-t border-haveli-accent/30 relative overflow-hidden">
+
+      {/* Lotus Watermark Background */}
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none flex items-center justify-center">
+        <i className="fas fa-spa text-[420px] text-haveli-accent"></i>
+      </div>
+
+      <div className="container mx-auto px-6 relative z-10">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-14 mb-20">
+
+          {/* ================= BRAND SECTION ================= */}
           <div>
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="border border-haveli-accent text-haveli-accent w-12 h-12 rounded-xl flex items-center justify-center font-display font-bold text-xl">
-                VH
+            <div className="flex items-center space-x-4 mb-6">
+
+              {/* Royal Monogram Seal */}
+              <div className="relative">
+                <div className="border border-haveli-accent/40 text-haveli-accent w-14 h-14 rounded-full flex items-center justify-center font-display font-semibold text-xl shadow-inner bg-black/20">
+                  VH
+                </div>
+                <i className="fas fa-crown text-[10px] text-haveli-accent absolute -top-2 left-1/2 -translate-x-1/2"></i>
               </div>
+
               <div>
-                <h2 className="text-2xl font-bold font-display text-white tracking-wide">Veridian Haveli</h2>
-                <p className="text-haveli-accent text-sm font-light mt-1">Luxury stays & warm hospitality</p>
+                <h2 className="text-2xl font-bold font-display tracking-[0.12em] uppercase">
+                  Veridian Haveli
+                </h2>
+                <p className="text-haveli-accent text-xs tracking-[0.35em] uppercase mt-1">
+                  Heritage Hotel & Suites
+                </p>
               </div>
             </div>
-            <p className="text-white/70 text-sm mb-8 leading-relaxed font-light">
-              Experience world-class hospitality at Veridian Haveli. Comfort, cleanliness and care — every stay matters.
+
+            <p className="text-white/70 text-sm leading-relaxed font-light max-w-sm">
+              Experience refined heritage hospitality where timeless architecture meets modern comfort. Every stay is crafted with warmth, elegance, and care.
             </p>
-            <div className="space-y-3 text-sm text-white/70 font-light">
+
+            <div className="mt-8 space-y-3 text-sm text-white/70 font-light">
               <p className="flex items-center">
                 <i className="far fa-map text-haveli-accent w-6"></i>
                 Riico industrial area (Reengus), Sikar, Rajasthan
@@ -37,65 +56,77 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Middle Section: Links & Newsletter */}
+          {/* ================= NAVIGATION ================= */}
           <div>
-            <h3 className="text-lg font-display text-white mb-6 tracking-wide">Quick Links</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm text-white/70 font-light mb-10">
+            <h3 className="text-lg font-display text-white mb-6 tracking-[0.2em] uppercase">
+              Explore
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4 text-sm text-white/70 font-light mb-12">
               <Link to="/" className="hover:text-haveli-accent transition">Home</Link>
               <Link to="/booking" className="hover:text-haveli-accent transition">Reserve Suite</Link>
-              <Link to="/order" className="hover:text-haveli-accent transition">Order Food</Link>
-              {/* Anchor jumping to #admin-login */}
+              <Link to="/order" className="hover:text-haveli-accent transition">Dining</Link>
+              <a href="/#gallery" className="hover:text-haveli-accent transition">Gallery</a>
+              <a href="/#about" className="hover:text-haveli-accent transition">About</a>
               <a href="/#admin-login" className="hover:text-haveli-accent transition">Admin Panel</a>
             </div>
 
-            <h3 className="text-lg font-display text-white mb-4 tracking-wide">Subscribe to offers</h3>
+            {/* Newsletter */}
+            <h3 className="text-sm font-display text-white mb-3 tracking-[0.25em] uppercase">
+              Exclusive Offers
+            </h3>
+
             <form className="flex flex-col space-y-3" onSubmit={(e) => e.preventDefault()}>
-              <input 
-                type="email" 
-                placeholder="Your email" 
-                className="bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-haveli-accent placeholder-white/50"
+              <input
+                type="email"
+                placeholder="Your email address"
+                className="bg-white/5 border border-white/20 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-haveli-accent placeholder-white/40"
               />
-              <button 
-                type="submit" 
-                className="bg-haveli-accent hover:bg-haveli-accentHover text-white font-medium h-12 rounded-xl transition"
+              <button
+                type="submit"
+                className="bg-haveli-accent hover:bg-haveli-accentHover text-haveli-deep font-medium h-12 rounded-xl transition tracking-wide"
               >
-                Subscribe
+                Join Mailing List
               </button>
             </form>
-            <p className="text-xs text-white/50 font-light mt-3">No spam — only occasional offers and booking updates.</p>
+            <p className="text-xs text-white/40 mt-3">Occasional offers. No spam.</p>
           </div>
 
-          {/* Right Section: Socials & Contact Card */}
+          {/* ================= CONTACT CARD ================= */}
           <div>
-            <h3 className="text-lg font-display text-white mb-6 tracking-wide">Connect with us</h3>
-            <div className="flex space-x-4 mb-8">
-              <a href="#!" className="w-12 h-12 border border-white/20 hover:border-haveli-accent text-white/80 hover:text-haveli-accent rounded-xl flex items-center justify-center transition">
-                <i className="fab fa-facebook-f text-lg"></i>
-              </a>
-              <a href="#!" className="w-12 h-12 border border-white/20 hover:border-haveli-accent text-white/80 hover:text-haveli-accent rounded-xl flex items-center justify-center transition">
-                <i className="fab fa-instagram text-lg"></i>
-              </a>
-              <a href="#!" className="w-12 h-12 border border-white/20 hover:border-haveli-accent text-white/80 hover:text-haveli-accent rounded-xl flex items-center justify-center transition">
-                <i className="fab fa-twitter text-lg"></i>
-              </a>
+            <h3 className="text-lg font-display text-white mb-6 tracking-[0.2em] uppercase">
+              Connect
+            </h3>
+
+            {/* Social Icons */}
+            <div className="flex space-x-4 mb-10">
+              {["facebook-f","instagram","twitter"].map((icon,i)=>(
+                <a key={i} href="#!" className="w-12 h-12 border border-white/20 hover:border-haveli-accent text-white/70 hover:text-haveli-accent rounded-full flex items-center justify-center transition">
+                  <i className={`fab fa-${icon}`}></i>
+                </a>
+              ))}
             </div>
 
-            <div className="bg-white/5 border border-white/10 p-8 rounded-xl">
-              <p className="text-sm text-white/70 font-light mb-2">Need help with a booking or order?</p>
-              <p className="text-haveli-accent font-bold text-2xl mb-1">+91 11 1234 5678</p>
-              <p className="text-xs text-white/50 font-light">Available 24/7 Service</p>
+            {/* Call Card */}
+            <div className="bg-white/5 border border-haveli-accent/20 p-8 rounded-2xl backdrop-blur-sm">
+              <p className="text-sm text-white/70 mb-2">Reservations & Assistance</p>
+              <p className="text-haveli-accent font-semibold text-2xl mb-1 tracking-wide">
+                +91 11 1234 5678
+              </p>
+              <p className="text-xs text-white/40">24/7 Guest Support</p>
             </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-white/50 font-light">
-          <p>© 2025 Veridian Haveli. All rights reserved.</p>
+        {/* ================= BOTTOM BAR ================= */}
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-white/40 tracking-wide">
+          <p>© 2025 Veridian Haveli — All rights reserved</p>
           <p className="mt-4 md:mt-0">
-            Crafted with <i className="fas fa-heart text-haveli-accent mx-1"></i> — 
-            <a href="/#admin-login" className="text-white hover:text-haveli-accent hover:underline ml-1 transition">Admin Panel</a>
+            Crafted with <i className="fas fa-heart text-haveli-accent mx-1"></i>
+            <a href="/#admin-login" className="hover:text-haveli-accent ml-1 transition">Admin Access</a>
           </p>
         </div>
+
       </div>
     </footer>
   );
