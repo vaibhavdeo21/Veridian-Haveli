@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const Booking = require('../models/Booking');
 const Room = require('../models/Room');
+const upload = require('../middleware/uploadMiddleware');
 
 // --- MULTER STORAGE CONFIGURATION ---
 // Ensure the 'uploads' directory exists
@@ -164,6 +165,27 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Customer deleted permanently' });
   } catch (err) {
     res.status(500).json({ message: 'Error deleting customer' });
+  }
+});
+
+router.post('/:id/upload-id', upload.single('idFile'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Updated path to reflect the new subfolder
+    const documentPath = `/uploads/customer_documents/${req.file.filename}`;
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { idDocumentPath: documentPath },
+      { returnDocument: 'after' }
+    );
+
+    res.json({ message: 'ID archived successfully', booking: updatedBooking });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
