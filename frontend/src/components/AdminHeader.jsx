@@ -7,9 +7,13 @@ const AdminHeader = ({ toggleSidebar }) => {
   const { liveFeed, clearFeed } = useNotification(); 
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-haveli-card border-b border-haveli-border shadow-sm z-[100] px-4 md:px-6 transition-all duration-300 h-16 flex items-center gold-shimmer active">
+    /* FIXED: Added !important Tailwind prefixes (!) to ensure the header 
+       stays fixed at the top layer and doesn't get hidden by scrolling content.
+    */
+    <header className="!fixed !top-0 !left-0 !right-0 !w-full bg-white border-b border-haveli-border shadow-md !z-[999] px-4 md:px-6 transition-all duration-300 h-16 flex items-center gold-shimmer active">
       <div className="grid grid-cols-3 items-center w-full">
         
+        {/* Left Section: Navigation & Branding */}
         <div className="flex items-center justify-start space-x-4">
           <button 
             onClick={toggleSidebar} 
@@ -33,7 +37,7 @@ const AdminHeader = ({ toggleSidebar }) => {
             
             {/* Refined Typography */}
             <div className="flex flex-col justify-center leading-none">
-              <span className="text-sm sm:text-base font-bold font-display text-haveli-heading tracking-widest uppercase">
+              <span className="text-sm sm:text-base font-bold font-display text-haveli-heading tracking-widest uppercase transition-colors group-hover:text-haveli-accent">
                 Veridian Haveli
               </span>
               <span className="text-[8px] font-medium text-haveli-accent tracking-[0.2em] uppercase mt-0.5 hidden sm:block">
@@ -43,12 +47,14 @@ const AdminHeader = ({ toggleSidebar }) => {
           </Link>
         </div>
 
+        {/* Center Section: System Status */}
         <div className="flex items-center justify-center">
-          <span className="text-[10px] font-black text-haveli-primary uppercase tracking-[0.3em] text-center hidden md:block bg-haveli-section border border-haveli-border px-4 py-1 rounded-full">
+          <span className="text-[10px] font-black text-haveli-primary uppercase tracking-[0.3em] text-center hidden md:block bg-haveli-section border border-haveli-border px-4 py-1 rounded-full shadow-inner">
             Hotel Management Dashboard
           </span>
         </div>
         
+        {/* Right Section: Notifications */}
         <div className="flex items-center justify-end space-x-6">
           <div className="relative">
             <button 
@@ -63,25 +69,27 @@ const AdminHeader = ({ toggleSidebar }) => {
               )}
             </button>
             
+            {/* Notification Dropdown */}
             {isNotificationOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-haveli-card rounded-xl shadow-2xl overflow-hidden z-50 border border-haveli-border animate-fadeIn">
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl overflow-hidden z-[1000] border border-haveli-border animate-fadeIn">
                 <div className="py-3 px-5 bg-haveli-section border-b border-haveli-border flex justify-between items-center">
                   <span className="font-bold text-[10px] uppercase text-haveli-muted tracking-widest">Live Activity Feed</span>
                   {liveFeed.length > 0 && (
                     <button 
                       onClick={clearFeed}
-                      className="text-[9px] font-bold text-haveli-primary hover:text-haveli-deep uppercase tracking-tighter"
+                      className="text-[9px] font-bold text-haveli-primary hover:text-haveli-deep uppercase tracking-tighter transition-colors"
                     >
                       Clear All
                     </button>
                   )}
                 </div>
-                <div className="divide-y divide-haveli-border max-h-80 overflow-y-auto">
+                
+                <div className="divide-y divide-haveli-border max-h-80 overflow-y-auto custom-scrollbar">
                   {liveFeed.length > 0 ? (
                     liveFeed.map((item) => (
-                      <div key={item.id} className="p-4 hover:bg-haveli-section cursor-pointer transition">
+                      <div key={item.id} className="p-4 hover:bg-haveli-section cursor-pointer transition-colors group">
                         <div className="flex justify-between items-start mb-1">
-                          <p className="text-xs font-bold text-haveli-heading">{item.title}</p>
+                          <p className="text-xs font-bold text-haveli-heading group-hover:text-haveli-primary transition-colors">{item.title}</p>
                           <span className="text-[8px] font-bold text-haveli-accent bg-haveli-section border border-haveli-border px-1.5 py-0.5 rounded uppercase">
                             {item.time}
                           </span>
@@ -91,10 +99,14 @@ const AdminHeader = ({ toggleSidebar }) => {
                     ))
                   ) : (
                     <div className="p-10 text-center">
-                      <i className="fas fa-bell-slash text-haveli-border text-4xl mb-4"></i>
-                      <p className="text-xs text-haveli-muted font-light">No recent activity to show</p>
+                      <i className="fas fa-bell-slash text-haveli-border text-4xl mb-4 opacity-50"></i>
+                      <p className="text-xs text-haveli-muted font-light italic">No recent activity to show</p>
                     </div>
                   )}
+                </div>
+                
+                <div className="bg-haveli-section p-2 text-center border-t border-haveli-border">
+                   <p className="text-[8px] font-bold text-haveli-muted uppercase tracking-widest">Veridian Security Systems Active</p>
                 </div>
               </div>
             )}
