@@ -36,10 +36,26 @@ const CustomerProfile = () => {
     </div>
   );
 
-  // Calculations
-  const subtotal = (customer.totalAmount || 0) + (customer.foodCharges || 0);
-  const gst = subtotal * 0.18;
-  const totalBill = subtotal + gst;
+  // --- FIXED BILLING LOGIC: PREVENTS DOUBLE GST ---
+  // 1. Identify if this is a pre-taxed amount (Online bookings)
+  const isPreTaxed = customer.roomNumber?.toLowerCase().includes('online');
+
+  // 2. Determine the true Base Room Price
+  // If online, we back-calculate the base (Total / 1.18). If offline, totalAmount is already the base.
+  const roomTotalIncGST = customer.totalAmount || 0;
+  const trueBaseRoomPrice = isPreTaxed ? (roomTotalIncGST / 1.18) : roomTotalIncGST;
+  
+  // 3. Calculate GST only on what is necessary
+  // If online, GST is the difference. If offline, calculate 18% on top.
+  const roomGST = isPreTaxed ? (roomTotalIncGST - trueBaseRoomPrice) : (trueBaseRoomPrice * 0.18);
+  
+  // 4. Incidentals (Food is always taxed at 18%)
+  const foodTotal = customer.foodCharges || 0;
+  const foodGST = foodTotal * 0.18;
+
+  // 5. Final Totals
+  const finalGST = roomGST + foodGST;
+  const totalBill = roomTotalIncGST + foodTotal + foodGST; 
   const balanceLeft = totalBill - amountPaid;
 
   const normalizedStatus = (customer.status || "").replace(/\s/g, "").toLowerCase();
@@ -222,9 +238,10 @@ const CustomerProfile = () => {
                 Folio Billing
             </h3>
             <div className="space-y-4 mb-8">
-              <BillRow label="Suite Total" value={customer.totalAmount} />
-              <BillRow label="Culinary Charges" value={customer.foodCharges} />
-              <BillRow label="Heritage Tax (18%)" value={gst} isGst />
+              {/* Show the correctly categorized Suite Total */}
+              <BillRow label="Suite Total" value={roomTotalIncGST} />
+              <BillRow label="Culinary Charges" value={foodTotal} />
+              <BillRow label="Heritage Tax (18%)" value={finalGST} isGst />
               <div className="flex justify-between items-center pt-5 border-t border-haveli-border mt-4">
                 <span className="text-[10px] font-black text-haveli-heading uppercase tracking-widest">Grand Total</span>
                 <span className="text-2xl font-bold font-display text-haveli-primary">₹{totalBill.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
