@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { useNotification } from './NotificationContext.jsx';
-import { useAuth } from './AuthContext.jsx'; 
+import { useAuth } from './AuthContext.jsx';
 
 const DataContext = createContext();
 
@@ -16,7 +16,7 @@ export const DataProvider = ({ children }) => {
   const [topSellingFood, setTopSellingFood] = useState([]);
 
   const { showNotification, addLiveNotification } = useNotification();
-  const { updateUserStays } = useAuth(); 
+  const { updateUserStays } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,8 +92,8 @@ export const DataProvider = ({ children }) => {
 
       // If they paid online, we MUST lock a real room right now.
       if (paymentMode !== 'PayAtHotel') {
-        const availableRoom = rooms.find(r => 
-          r.type.toLowerCase().includes(roomData.baseType.toLowerCase()) && 
+        const availableRoom = rooms.find(r =>
+          r.type.toLowerCase().includes(roomData.baseType.toLowerCase()) &&
           (!r.availability || r.availability === 'Available')
         );
 
@@ -171,7 +171,7 @@ export const DataProvider = ({ children }) => {
       }
 
       // Update status, roomNumber, AND apply late fee in MongoDB
-      await axios.patch(`/api/bookings/${customerId}`, { 
+      await axios.patch(`/api/bookings/${customerId}`, {
         status: 'CheckedIn',
         roomNumber: physicalRoomNo,
         lateNightFee: lateNightFee
@@ -183,8 +183,8 @@ export const DataProvider = ({ children }) => {
       }
 
       setCustomers(prev => prev.map(c =>
-        (c.id === customerId || c._id === customerId) 
-          ? { ...c, status: 'CheckedIn', roomNumber: physicalRoomNo, lateNightFee: lateNightFee } 
+        (c.id === customerId || c._id === customerId)
+          ? { ...c, status: 'CheckedIn', roomNumber: physicalRoomNo, lateNightFee: lateNightFee }
           : c
       ));
 
@@ -193,13 +193,13 @@ export const DataProvider = ({ children }) => {
       ));
 
       addLiveNotification('Check-In', `Guest checked into Room ${physicalRoomNo}`);
-      
+
       if (lateNightFee > 0) {
         showNotification(`Guest checked in. Late night fee of ₹249 applied.`, 'success');
       } else {
         showNotification(`Guest checked into Room ${physicalRoomNo}`, 'success');
       }
-      
+
     } catch (err) {
       console.error("Check-in error:", err);
       showNotification('Check-in failed: Verify backend PATCH route', 'error');
@@ -228,8 +228,8 @@ export const DataProvider = ({ children }) => {
       }));
 
       setRooms(prev => prev.map(r =>
-        String(r.roomNumber) === String(customer?.roomNumber) 
-          ? { ...r, availability: 'Maintenance' } 
+        String(r.roomNumber) === String(customer?.roomNumber)
+          ? { ...r, availability: 'Maintenance' }
           : r
       ));
 
@@ -256,21 +256,26 @@ export const DataProvider = ({ children }) => {
   const addFoodItem = async (categoryKey, itemDetails) => {
     try {
       const formData = new FormData();
+      // 'description' must match the field name expected by your Mongoose model
       formData.append('name', itemDetails.name);
       formData.append('description', itemDetails.desc);
       formData.append('price', itemDetails.price);
-      formData.append('category', categoryKey);
+
+      // Ensure 'image' matches upload.single('image') in your backend
       if (itemDetails.imageFile) {
         formData.append('image', itemDetails.imageFile);
       }
 
-      const res = await axios.post('/api/food', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      /* FIX: The categoryKey is now passed in the URL. 
+         Axios will automatically handle the 'Content-Type' and 'boundary' 
+         when it detects a FormData object.
+      */
+      const res = await axios.post(`/api/food/${categoryKey}`, formData);
 
       const newItem = res.data;
       setFoodMenu(prev => {
-        const cat = newItem.category.toLowerCase();
+        // Use the categoryKey directly to ensure state stays in sync with the URL param
+        const cat = categoryKey.toLowerCase();
         return {
           ...prev,
           [cat]: {
@@ -279,9 +284,10 @@ export const DataProvider = ({ children }) => {
           }
         };
       });
-      showNotification('Food item added!', 'success');
+      showNotification('Heritage culinary entry archived!', 'success');
     } catch (err) {
-      showNotification('Failed to add food item', 'error');
+      console.error("Menu Update Error:", err.response?.data || err.message);
+      showNotification('Failed to add food item to registry', 'error');
     }
   };
 
@@ -371,7 +377,44 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  const editFoodItem = () => { };
+  const editFoodItem = async (categoryKey, itemId, itemDetails) => {
+    try {
+      const formData = new FormData();
+      // 'description' must match the field name expected by your Mongoose model
+      formData.append('name', itemDetails.name);
+      formData.append('description', itemDetails.desc);
+      formData.append('price', itemDetails.price);
+
+      // Only append the image if a new file was selected during the edit
+      if (itemDetails.imageFile) {
+        formData.append('image', itemDetails.imageFile);
+      }
+
+      /* FIX: We send the request to the category-specific PUT/PATCH endpoint.
+         The backend uploadMiddleware uses the URL param to place the new image 
+         in 'uploads/menu/:category/'.
+      */
+      const res = await axios.patch(`/api/food/${categoryKey}/${itemId}`, formData);
+
+      const updatedItem = res.data;
+      setFoodMenu(prev => {
+        const cat = categoryKey.toLowerCase();
+        return {
+          ...prev,
+          [cat]: {
+            ...prev[cat],
+            items: prev[cat].items.map(item =>
+              (item._id === itemId || item.id === itemId) ? updatedItem : item
+            )
+          }
+        };
+      });
+      showNotification('Culinary entry refined!', 'success');
+    } catch (err) {
+      console.error("Menu Edit Error:", err.response?.data || err.message);
+      showNotification('Failed to update the culinary registry', 'error');
+    }
+  };
 
   const value = {
     rooms,
