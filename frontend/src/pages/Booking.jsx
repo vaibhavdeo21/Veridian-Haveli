@@ -5,10 +5,10 @@ import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 
 const roomConfig = {
-  single: { name: 'Single Bed Room', price: 2500 },
-  double: { name: 'Double Bed Room', price: 4000 },
-  triple: { name: 'Triple Bed Room', price: 5500 },
-  dormitory: { name: 'Dormitory Bed', price: 1200 },
+  single: { name: 'Classic Single Suite', price: 2500 },
+  double: { name: 'Veridian Double Suite', price: 4000 },
+  triple: { name: 'Royal Triple Suite', price: 5500 },
+  dormitory: { name: 'Heritage Dormitory', price: 1200 },
 };
 
 const TAX_RATE = 0.18;
@@ -98,7 +98,7 @@ const Booking = () => {
           ...roomConfig[key],
           quantity,
           subtotal,
-          baseType: key // Pass base type to easily match later
+          baseType: key 
         };
       }
     }
@@ -118,17 +118,17 @@ const Booking = () => {
 
   if (!user) {
     return (
-      <main className="pt-32 pb-16 text-center min-h-[70vh] flex flex-col items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-lg w-full">
-          <i className="fas fa-lock text-5xl text-amber-600 mb-4"></i>
-          <h2 className="text-3xl font-bold font-display text-amber-800 mb-2">Login Required</h2>
-          <p className="text-gray-600 mb-8">You must have an account and be logged in to book a room at Jhankar Hotel.</p>
+      <main className="pt-32 pb-16 text-center min-h-[70vh] flex flex-col items-center justify-center bg-haveli-bg">
+        <div className="bg-haveli-card border border-haveli-border p-8 rounded-xl shadow-sm max-w-lg w-full">
+          <i className="fas fa-lock text-5xl text-haveli-accent mb-4"></i>
+          <h2 className="text-3xl font-bold font-display text-haveli-heading mb-2">Login Required</h2>
+          <p className="text-haveli-muted mb-8 font-light">Please sign in to your account to reserve a suite at Veridian Haveli.</p>
           <div className="flex flex-col space-y-3">
-            <Link to="/login" className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-lg font-semibold transition">
-              Log In
+            <Link to="/login" className="bg-haveli-primary hover:bg-haveli-primaryHover text-white h-12 rounded-xl font-medium flex items-center justify-center transition">
+              Sign In
             </Link>
-            <Link to="/register" className="bg-gray-800 hover:bg-black text-white px-8 py-3 rounded-lg font-semibold transition">
-              Create an Account
+            <Link to="/register" className="border border-haveli-border text-haveli-heading hover:bg-haveli-bg h-12 rounded-xl font-medium flex items-center justify-center transition">
+              Create Account
             </Link>
           </div>
         </div>
@@ -150,7 +150,7 @@ const Booking = () => {
     if (quantity >= 0 && quantity <= maxAvailable) {
       setSelectedRooms(prev => ({ ...prev, [roomType]: quantity }));
     } else if (quantity > maxAvailable) {
-      showNotification(`Only ${maxAvailable} ${roomType} rooms are currently available.`, 'error');
+      showNotification(`Only ${maxAvailable} suites are currently available.`, 'error');
     }
   };
 
@@ -165,7 +165,7 @@ const Booking = () => {
 
   const handleNextToGuest = () => {
     if (roomTotals.roomTotal <= 0) {
-      showNotification('Please select at least one available room and stay dates.', 'error');
+      showNotification('Please select at least one suite and valid stay dates.', 'error');
       return;
     }
     goToStep(2);
@@ -173,13 +173,12 @@ const Booking = () => {
 
   const handleNextToReview = () => {
     if (!guestDetails.firstName || !guestDetails.lastName || !guestDetails.email || !guestDetails.phone) {
-      showNotification('Please fill in all required guest details.', 'error');
+      showNotification('Please provide all required guest information.', 'error');
       return;
     }
     goToStep(3);
   };
 
-  // --- NEW: Handle Booking Submit with Payment Modes ---
   const handleConfirmBooking = async (paymentMode, amountPaid) => {
     let success = true;
     const finalGuestDetails = {
@@ -192,18 +191,13 @@ const Booking = () => {
 
     for (const [key, data] of Object.entries(roomTotals.details)) {
       if (data.quantity > 0) {
-
-        // Loop for quantity if they booked multiple rooms of the same type
         for (let i = 0; i < data.quantity; i++) {
           const roomData = {
-            baseType: data.baseType, // E.g., 'single'
+            baseType: data.baseType, 
             type: data.name,
-            totalAmount: (data.subtotal / data.quantity) * (1 + TAX_RATE) // Cost per room incl tax
+            totalAmount: (data.subtotal / data.quantity) * (1 + TAX_RATE) 
           };
-
-          // Divide the total amount paid across the rooms for the ledger
           const perRoomPaid = amountPaid / (Object.values(roomTotals.details).reduce((sum, d) => sum + d.quantity, 0));
-
           try {
             await addCustomer(finalGuestDetails, roomData, paymentMode, perRoomPaid);
           } catch (error) {
@@ -215,43 +209,44 @@ const Booking = () => {
 
     if (success) {
       updateActiveBooking('Online');
-      showNotification(`Thank you! Your booking is confirmed. Mode: ${paymentMode.replace(/([A-Z])/g, ' $1').trim()}`, 'success');
+      showNotification(`Reservation Confirmed. Welcome to Veridian Haveli!`, 'success');
       setSelectedRooms({ single: 0, double: 0, triple: 0, dormitory: 0 });
       setDates({ checkIn: getToday(), checkOut: getTomorrow() });
       setGuestDetails({ firstName: '', lastName: '', email: '', phone: '', address: '', city: '', state: '', zip: '', requests: '' });
       goToStep(1);
     } else {
-      showNotification('Some bookings failed. Please contact support.', 'error');
+      showNotification('Reservation failed. Please contact our concierge.', 'error');
     }
   };
 
   return (
-    <main className="pt-28 pb-16 bg-gray-50 min-h-screen">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display text-amber-800">Book Your Stay</h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">Select from real-time available rooms managed by our front desk</p>
-          <p className="text-xs font-bold mt-2 text-amber-700">Check-in: 12:00 PM | Check-out: 11:00 AM</p>
+    <main className="pt-32 pb-16 bg-haveli-bg min-h-screen">
+      <div className="container mx-auto px-6 max-w-6xl">
+        <div className="text-center mb-12">
+          <p className="text-haveli-accent uppercase tracking-widest font-semibold text-sm mb-2">Reservation Portal</p>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 font-display text-haveli-heading">Reserve Your Stay</h1>
+          <p className="text-haveli-muted max-w-2xl mx-auto font-light">Select from our real-time inventory of heritage suites and rooms</p>
+          <p className="text-xs font-bold mt-4 text-haveli-primary uppercase tracking-tighter">Arrival: 12:00 PM | Departure: 11:00 AM</p>
         </div>
 
-        <div className="mb-12">
+        <div className="mb-16">
           <div className="flex items-center justify-between max-w-3xl mx-auto relative">
-            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 -translate-y-1/2 z-0"></div>
+            <div className="absolute top-1/2 left-0 w-full h-px bg-haveli-border -translate-y-1/2 z-0"></div>
             <div
-              className="absolute top-1/2 left-0 h-0.5 bg-amber-600 -translate-y-1/2 z-0 transition-all duration-500"
+              className="absolute top-1/2 left-0 h-px bg-haveli-accent -translate-y-1/2 z-0 transition-all duration-700"
               style={{ width: `${(currentStep - 1) * 50}%` }}
             ></div>
 
             {[
-              { s: 1, l: "Select Rooms" },
-              { s: 2, l: "Guest Details" },
+              { s: 1, l: "Select Suites" },
+              { s: 2, l: "Guest Info" },
               { s: 3, l: "Review & Pay" }
             ].map((item) => (
               <div key={item.s} className="relative z-10 flex flex-col items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${currentStep >= item.s ? 'bg-amber-600 text-white shadow-lg' : 'bg-white text-gray-400 border-2 border-gray-200'}`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all duration-500 border ${currentStep >= item.s ? 'bg-haveli-deep text-haveli-accent border-haveli-accent shadow-sm' : 'bg-haveli-card text-haveli-muted border-haveli-border'}`}>
                   {currentStep > item.s ? <i className="fas fa-check"></i> : item.s}
                 </div>
-                <span className={`mt-2 text-xs md:text-sm font-bold tracking-wide uppercase ${currentStep >= item.s ? 'text-amber-800' : 'text-gray-400'}`}>
+                <span className={`mt-3 text-xs font-bold tracking-widest uppercase ${currentStep >= item.s ? 'text-haveli-heading' : 'text-haveli-muted'}`}>
                   {item.l}
                 </span>
               </div>
@@ -261,9 +256,9 @@ const Booking = () => {
 
         {currentStep === 1 && (
           <div className="animate-fadeIn">
-            <h2 className="text-3xl font-bold mb-8 font-display text-center text-amber-800">Choose Your Accommodation</h2>
+            <h2 className="text-3xl font-bold mb-10 font-display text-center text-haveli-heading">Select Accommodations</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
               {Object.entries(roomConfig).map(([key, config]) => (
                 <RoomSelectionCard
                   key={key}
@@ -277,35 +272,35 @@ const Booking = () => {
               ))}
             </div>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-              <h3 className="text-xl font-bold mb-4 font-display text-amber-800">Select Your Stay Dates</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-haveli-card border border-haveli-border rounded-xl p-8 mb-10">
+              <h3 className="text-xl font-bold mb-6 font-display text-haveli-heading">Stay Itinerary</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">Check-in Date</label>
-                  <input type="date" id="checkIn" value={dates.checkIn} min={getToday()} onChange={handleDateChange} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-amber-600" />
+                  <label className="block text-sm font-semibold mb-2 text-haveli-heading tracking-wide uppercase">Check-in Date</label>
+                  <input type="date" id="checkIn" value={dates.checkIn} min={getToday()} onChange={handleDateChange} className="w-full h-12 px-4 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-body" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">Check-out Date</label>
-                  <input type="date" id="checkOut" value={dates.checkOut} min={dates.checkIn} onChange={handleDateChange} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-amber-600" />
+                  <label className="block text-sm font-semibold mb-2 text-haveli-heading tracking-wide uppercase">Check-out Date</label>
+                  <input type="date" id="checkOut" value={dates.checkOut} min={dates.checkIn} onChange={handleDateChange} className="w-full h-12 px-4 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-body" />
                 </div>
               </div>
-              <div className="mt-4 text-sm font-bold text-amber-700 bg-amber-50 py-2 px-4 rounded-lg inline-block">
-                Total Nights: {nights}
+              <div className="mt-6 text-sm font-bold text-haveli-primary bg-haveli-section py-2 px-6 border border-haveli-border rounded-full inline-block uppercase tracking-widest">
+                Duration: {nights} Nights
               </div>
             </div>
 
             <RoomSummaryTable roomTotals={roomTotals} nights={nights} />
 
-            <div className="flex justify-between mt-8">
-              <Link to="/" className="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-bold transition">
-                <i className="fas fa-arrow-left mr-2"></i>Back to Home
+            <div className="flex justify-between mt-12">
+              <Link to="/" className="text-haveli-muted hover:text-haveli-heading h-12 px-8 rounded-xl font-medium transition flex items-center">
+                <i className="fas fa-chevron-left mr-2 text-xs"></i>Back to Home
               </Link>
               <button
                 disabled={roomTotals.roomTotal === 0}
                 onClick={handleNextToGuest}
-                className={`px-8 py-3 rounded-lg font-bold transition flex items-center ${roomTotals.roomTotal > 0 ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                className={`h-12 px-10 rounded-xl font-medium transition flex items-center justify-center ${roomTotals.roomTotal > 0 ? 'bg-haveli-primary text-white hover:bg-haveli-primaryHover' : 'bg-haveli-border text-haveli-muted cursor-not-allowed'}`}
               >
-                Continue to Guest Details <i className="fas fa-arrow-right ml-2"></i>
+                Continue <i className="fas fa-chevron-right ml-2 text-xs"></i>
               </button>
             </div>
           </div>
@@ -313,14 +308,14 @@ const Booking = () => {
 
         {currentStep === 2 && (
           <div className="animate-fadeIn max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 font-display text-center text-amber-800">Guest Information</h2>
+            <h2 className="text-3xl font-bold mb-10 font-display text-center text-haveli-heading">Guest Particulars</h2>
             <GuestForm guestDetails={guestDetails} onChange={handleGuestChange} />
-            <div className="flex justify-between mt-8">
-              <button onClick={() => goToStep(1)} className="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-bold transition">
-                <i className="fas fa-arrow-left mr-2"></i>Back to Rooms
+            <div className="flex justify-between mt-12">
+              <button onClick={() => goToStep(1)} className="text-haveli-muted hover:text-haveli-heading h-12 px-8 font-medium transition flex items-center">
+                <i className="fas fa-chevron-left mr-2 text-xs"></i>Suites
               </button>
-              <button onClick={handleNextToReview} className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-lg font-bold transition">
-                Review & Payment <i className="fas fa-arrow-right ml-2"></i>
+              <button onClick={handleNextToReview} className="bg-haveli-accent hover:bg-haveli-accentHover text-white h-12 px-10 rounded-xl font-medium transition flex items-center shadow-sm">
+                Review & Payment <i className="fas fa-chevron-right ml-2 text-xs"></i>
               </button>
             </div>
           </div>
@@ -328,16 +323,14 @@ const Booking = () => {
 
         {currentStep === 3 && (
           <div className="animate-fadeIn max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 font-display text-center text-amber-800">Review Your Booking</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <h2 className="text-3xl font-bold mb-10 font-display text-center text-haveli-heading">Folio Review</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               <BookingReview dates={dates} nights={nights} roomTotals={roomTotals} finalTotals={finalTotals} guest={guestDetails} />
-
-              {/* NEW: Updated Payment Form passing data back up */}
               <PaymentForm finalTotals={finalTotals} onConfirm={handleConfirmBooking} />
             </div>
-            <div className="flex justify-between mt-8">
-              <button onClick={() => goToStep(2)} className="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-bold transition">
-                <i className="fas fa-arrow-left mr-2"></i>Back to Guest Details
+            <div className="flex justify-between mt-12">
+              <button onClick={() => goToStep(2)} className="text-haveli-muted hover:text-haveli-heading h-12 px-8 font-medium transition flex items-center">
+                <i className="fas fa-chevron-left mr-2 text-xs"></i>Guest Info
               </button>
             </div>
           </div>
@@ -350,65 +343,65 @@ const Booking = () => {
 // --- Sub-Components ---
 
 const RoomSelectionCard = ({ roomType, config, quantity, onRoomChange, subtotal, availableCount }) => (
-  <div className="room-card bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 transition-hover duration-300 hover:shadow-2xl">
+  <div className="bg-haveli-card border border-haveli-border rounded-xl overflow-hidden transition-all duration-500 hover:shadow-xl flex flex-col h-full group">
     <div className="relative">
-      <img src={`https://images.unsplash.com/${config.price === 2500 ? 'photo-1631049307264-da0ec9d70304' : config.price === 4000 ? 'photo-1566665797739-1674de7a421a' : config.price === 5500 ? 'photo-1611892440504-42a792e24d32' : 'photo-1590490360182-c33d57733427'}?w=400&h=300&fit=crop`} alt={config.name} className="w-full h-48 object-cover" />
-      <div className="absolute top-4 right-4 bg-amber-600 text-white text-sm font-black px-3 py-1 rounded-full shadow-lg">
+      <img src={`https://images.unsplash.com/${config.price === 2500 ? 'photo-1631049307264-da0ec9d70304' : config.price === 4000 ? 'photo-1566665797739-1674de7a421a' : config.price === 5500 ? 'photo-1611892440504-42a792e24d32' : 'photo-1590490360182-c33d57733427'}?w=400&h=300&fit=crop`} alt={config.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-700" />
+      <div className="absolute top-4 right-4 bg-haveli-card/90 backdrop-blur-sm border border-haveli-accent text-haveli-accent text-xs font-bold px-4 py-1.5 rounded-full">
         ₹{config.price.toLocaleString()} / night
       </div>
     </div>
-    <div className="p-6">
-      <h3 className="text-lg font-bold text-gray-800 mb-4 h-12 leading-tight">{config.name}</h3>
-      <div className="flex justify-between items-center mb-4">
-        <span className={`text-xs font-bold uppercase tracking-tighter ${availableCount > 0 ? 'text-green-500' : 'text-red-500'}`}>
-          {availableCount > 0 ? `Available Units: ${availableCount}` : 'Fully Booked'}
+    <div className="p-6 flex flex-col flex-grow">
+      <h3 className="text-xl font-bold text-haveli-heading mb-4 font-display h-12 leading-tight">{config.name}</h3>
+      <div className="flex justify-between items-center mb-6">
+        <span className={`text-[10px] font-bold uppercase tracking-widest ${availableCount > 0 ? 'text-haveli-primary' : 'text-red-500'}`}>
+          {availableCount > 0 ? `Available: ${availableCount}` : 'Fully Booked'}
         </span>
-        <div className="flex items-center space-x-3 bg-gray-50 rounded-lg p-1 border">
-          <button onClick={() => onRoomChange(roomType, quantity - 1)} className="w-8 h-8 flex items-center justify-center bg-white rounded shadow-sm text-amber-600 hover:bg-amber-50 transition">-</button>
-          <span className="font-bold text-gray-700 w-4 text-center">{quantity}</span>
-          <button onClick={() => onRoomChange(roomType, quantity + 1)} className="w-8 h-8 flex items-center justify-center bg-white rounded shadow-sm text-amber-600 hover:bg-amber-50 transition">+</button>
+        <div className="flex items-center space-x-3 bg-haveli-section rounded-lg p-1 border border-haveli-border">
+          <button onClick={() => onRoomChange(roomType, quantity - 1)} className="w-8 h-8 flex items-center justify-center text-haveli-primary hover:bg-haveli-bg rounded transition"><i className="fas fa-minus text-xs"></i></button>
+          <span className="font-bold text-haveli-heading w-4 text-center">{quantity}</span>
+          <button onClick={() => onRoomChange(roomType, quantity + 1)} className="w-8 h-8 flex items-center justify-center text-haveli-primary hover:bg-haveli-bg rounded transition"><i className="fas fa-plus text-xs"></i></button>
         </div>
       </div>
-      <div className="text-right border-t pt-4">
-        <span className="text-amber-800 font-black">Subtotal: ₹{subtotal.toLocaleString()}</span>
+      <div className="text-right border-t border-haveli-border pt-4 mt-auto">
+        <span className="text-haveli-accent font-bold">Subtotal: ₹{subtotal.toLocaleString()}</span>
       </div>
     </div>
   </div>
 );
 
 const RoomSummaryTable = ({ roomTotals, nights }) => (
-  <div className="bg-white rounded-xl shadow-md p-6 mb-8 border border-gray-100">
-    <h3 className="text-xl font-bold mb-6 font-display text-amber-800 flex items-center">
-      <i className="fas fa-list-ul mr-3"></i>Room Booking Summary
+  <div className="bg-haveli-card border border-haveli-border rounded-xl p-8 mb-10">
+    <h3 className="text-xl font-bold mb-8 font-display text-haveli-heading flex items-center">
+      <i className="fas fa-list mr-3 text-haveli-accent"></i>Booking Breakdown
     </h3>
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b">
-            <th className="pb-4">Room Type</th>
-            <th className="pb-4 text-center">Quantity</th>
-            <th className="pb-4 text-right">Price/Night</th>
-            <th className="pb-4 text-right">Subtotal</th>
+          <tr className="text-left text-haveli-muted uppercase tracking-widest border-b border-haveli-border">
+            <th className="pb-4 font-medium">Suite Type</th>
+            <th className="pb-4 text-center font-medium">Qty</th>
+            <th className="pb-4 text-right font-medium">Rate</th>
+            <th className="pb-4 text-right font-medium">Total</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-haveli-border">
           {Object.keys(roomTotals.details).length > 0 ? (
             Object.entries(roomTotals.details).map(([key, data]) => (
               <tr key={key}>
-                <td className="py-4 font-bold text-gray-700">{data.name}</td>
-                <td className="py-4 text-center font-semibold">{data.quantity}</td>
-                <td className="py-4 text-right text-gray-500">₹{data.price.toLocaleString()}</td>
-                <td className="py-4 text-right font-black text-amber-600">₹{data.subtotal.toLocaleString()}</td>
+                <td className="py-4 font-medium text-haveli-heading">{data.name}</td>
+                <td className="py-4 text-center font-light">{data.quantity}</td>
+                <td className="py-4 text-right font-light">₹{data.price.toLocaleString()}</td>
+                <td className="py-4 text-right font-bold text-haveli-primary">₹{data.subtotal.toLocaleString()}</td>
               </tr>
             ))
           ) : (
-            <tr><td colSpan="4" className="py-8 text-center text-gray-400 italic">No rooms selected yet. Use the cards above to start.</td></tr>
+            <tr><td colSpan="4" className="py-10 text-center text-haveli-muted font-light italic tracking-wide">No suite selections made yet.</td></tr>
           )}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-gray-50">
-            <td colSpan="3" className="py-4 text-right font-bold text-gray-500">Room Total (per night):</td>
-            <td className="py-4 text-right font-black text-amber-800 text-lg">₹{(roomTotals.roomTotal / (nights || 1)).toLocaleString()}</td>
+          <tr className="border-t-2 border-haveli-border">
+            <td colSpan="3" className="py-6 text-right font-medium text-haveli-muted uppercase tracking-widest text-xs">Total Nightly Rate:</td>
+            <td className="py-6 text-right font-bold text-haveli-heading text-lg">₹{(roomTotals.roomTotal / (nights || 1)).toLocaleString()}</td>
           </tr>
         </tfoot>
       </table>
@@ -417,32 +410,32 @@ const RoomSummaryTable = ({ roomTotals, nights }) => (
 );
 
 const GuestForm = ({ guestDetails, onChange }) => (
-  <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
-    <h3 className="text-2xl font-bold mb-8 font-display text-amber-800 flex items-center">
-      <i className="fas fa-user-edit mr-3"></i>Primary Guest Details
+  <div className="bg-haveli-card border border-haveli-border rounded-xl p-10 mb-10 shadow-sm">
+    <h3 className="text-2xl font-bold mb-10 font-display text-haveli-heading flex items-center border-b border-haveli-border pb-4">
+      <i className="fas fa-user-edit mr-3 text-haveli-accent"></i>Guest Registry
     </h3>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-      <FormInput label="First Name" id="firstName" value={guestDetails.firstName} onChange={onChange} required placeholder="Rahul" />
-      <FormInput label="Last Name" id="lastName" value={guestDetails.lastName} onChange={onChange} required placeholder="Sharma" />
-      <FormInput label="Email Address" id="email" type="email" value={guestDetails.email} onChange={onChange} required placeholder="rahul@example.com" />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+      <FormInput label="First Name" id="firstName" value={guestDetails.firstName} onChange={onChange} required placeholder="Heritage Guest" />
+      <FormInput label="Last Name" id="lastName" value={guestDetails.lastName} onChange={onChange} required placeholder="Verified" />
+      <FormInput label="Email Address" id="email" type="email" value={guestDetails.email} onChange={onChange} required placeholder="resident@veridian.com" />
       <FormInput label="Phone Number" id="phone" type="tel" value={guestDetails.phone} onChange={onChange} required placeholder="+91 ..." />
     </div>
-    <div className="mb-2">
-      <label className="block text-sm font-bold text-gray-700 mb-3">Special Requests or Instructions</label>
-      <textarea id="requests" value={guestDetails.requests} onChange={onChange} className="w-full px-4 py-4 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-4 focus:ring-amber-50 bg-gray-50 transition-all" rows="4" placeholder="Mention any extra needs like extra towels, early check-in, etc."></textarea>
+    <div>
+      <label className="block text-xs font-bold text-haveli-muted uppercase tracking-widest mb-3">Special Preferences</label>
+      <textarea id="requests" value={guestDetails.requests} onChange={onChange} className="w-full p-6 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary font-light" rows="4" placeholder="Mention dietary needs, late arrival, or accessibility requests..."></textarea>
     </div>
   </div>
 );
 
 const FormInput = ({ label, id, type = 'text', value, onChange, required = false, placeholder = '' }) => (
   <div>
-    <label className="block text-sm font-bold text-gray-700 mb-3">{label}{required && ' *'}</label>
+    <label className="block text-xs font-bold text-haveli-muted uppercase tracking-widest mb-3">{label}{required && ' *'}</label>
     <input
       type={type}
       id={id}
       value={value}
       onChange={onChange}
-      className="w-full px-4 py-4 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-4 focus:ring-amber-50 bg-gray-50 transition-all"
+      className="w-full h-12 px-6 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary font-light"
       required={required}
       placeholder={placeholder}
     />
@@ -450,54 +443,58 @@ const FormInput = ({ label, id, type = 'text', value, onChange, required = false
 );
 
 const BookingReview = ({ dates, nights, roomTotals, finalTotals, guest }) => (
-  <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-    <h3 className="text-2xl font-bold mb-8 font-display text-amber-800 border-b pb-4">
-      Stay Summary
+  <div className="bg-haveli-card border border-haveli-border rounded-xl p-10 flex flex-col h-full shadow-sm">
+    <h3 className="text-2xl font-bold mb-10 font-display text-haveli-heading border-b border-haveli-border pb-4">
+      Stay Overview
     </h3>
-    <div className="space-y-6">
-      <div className="flex justify-between"><span>Guest Name:</span><span className="font-bold">{guest.firstName} {guest.lastName}</span></div>
+    <div className="space-y-8 flex-grow">
+      <div className="flex justify-between items-center"><span className="text-haveli-muted uppercase tracking-widest text-[10px] font-bold">Primary Resident</span><span className="font-bold text-haveli-heading">{guest.firstName} {guest.lastName}</span></div>
       <div className="flex justify-between items-center">
         <div>
-          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Check-in</h4>
-          <p className="font-bold text-gray-800">{dates.checkIn}</p>
+          <h4 className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-1">Check-in</h4>
+          <p className="font-bold text-haveli-heading">{dates.checkIn}</p>
         </div>
-        <div className="text-amber-600"><i className="fas fa-long-arrow-alt-right text-2xl"></i></div>
+        <div className="text-haveli-accent opacity-50"><i className="fas fa-arrow-right text-lg"></i></div>
         <div className="text-right">
-          <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Check-out</h4>
-          <p className="font-bold text-gray-800">{dates.checkOut}</p>
+          <h4 className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-1">Check-out</h4>
+          <p className="font-bold text-haveli-heading">{dates.checkOut}</p>
         </div>
       </div>
 
-      <div className="bg-amber-50 p-4 rounded-xl flex justify-between items-center">
-        <span className="text-sm font-bold text-amber-800">Stay Duration</span>
-        <span className="font-black text-amber-900">{nights} Nights</span>
+      <div className="bg-haveli-section border border-haveli-border p-5 rounded-xl flex justify-between items-center">
+        <span className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest">Confirmed Duration</span>
+        <span className="font-display font-bold text-haveli-primary text-xl">{nights} Nights</span>
       </div>
 
-      <div className="space-y-4 pt-4 border-t">
+      <div className="space-y-4 pt-6 border-t border-haveli-border">
         {Object.entries(roomTotals.details).map(([key, data]) => (
           <div key={key} className="flex justify-between text-sm">
-            <span className="font-bold text-gray-700">{data.name} x {data.quantity}</span>
-            <span className="font-black text-gray-900">₹{data.subtotal.toLocaleString()}</span>
+            <span className="text-haveli-body font-light">{data.name} (x{data.quantity})</span>
+            <span className="font-bold text-haveli-heading">₹{data.subtotal.toLocaleString()}</span>
           </div>
         ))}
       </div>
 
-      <div className="border-t pt-6 space-y-3">
-        <div className="flex justify-between font-black text-2xl text-amber-700 pt-2 border-t border-dashed">
-          <span>Total Bill</span>
-          <span>₹{finalTotals.grandTotal.toLocaleString()}</span>
+      <div className="border-t border-haveli-border pt-8 mt-auto space-y-4">
+        {finalTotals.discountAmount > 0 && (
+          <div className="flex justify-between text-xs text-haveli-primary font-bold bg-haveli-section p-3 rounded-lg border border-haveli-border">
+            <span><i className="fas fa-award mr-2"></i>Heritage Reward (5%)</span>
+            <span>- ₹{finalTotals.discountAmount.toLocaleString()}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-bold text-2xl text-haveli-heading pt-4 border-t border-dashed border-haveli-border">
+          <span className="font-display">Total Folio</span>
+          <span className="text-haveli-accent">₹{finalTotals.grandTotal.toLocaleString()}</span>
         </div>
       </div>
     </div>
   </div>
 );
 
-// --- NEW: Dynamic Payment Options Component ---
 const PaymentForm = ({ finalTotals, onConfirm }) => {
   const [paymentMode, setPaymentMode] = useState('OnlineFull');
   const [method, setMethod] = useState('Credit Card');
 
-  // Calculate amount to process based on selection
   const amountToPay = paymentMode === 'OnlineFull'
     ? finalTotals.grandTotal
     : paymentMode === 'OnlinePartial'
@@ -505,80 +502,80 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
       : 0;
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 flex flex-col h-full">
-      <h3 className="text-2xl font-bold mb-6 font-display text-amber-800 border-b pb-4">
-        <i className="fas fa-shield-alt mr-3"></i>Choose Payment Mode
+    <div className="bg-haveli-card border border-haveli-border rounded-xl p-10 flex flex-col h-full shadow-sm">
+      <h3 className="text-2xl font-bold mb-10 font-display text-haveli-heading border-b border-haveli-border pb-4">
+        <i className="fas fa-shield-alt mr-3 text-haveli-accent"></i>Secure Settlement
       </h3>
 
-      <div className="space-y-4 mb-6">
+      <div className="space-y-4 mb-8">
         {/* Full Payment */}
         <div
           onClick={() => setPaymentMode('OnlineFull')}
-          className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'OnlineFull' ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}
+          className={`border h-24 rounded-xl p-6 cursor-pointer transition flex flex-col justify-center ${paymentMode === 'OnlineFull' ? 'border-haveli-primary bg-haveli-section shadow-sm' : 'border-haveli-border bg-white hover:border-haveli-accent'}`}
         >
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <input type="radio" checked={paymentMode === 'OnlineFull'} readOnly className="text-green-600" />
-              <span className="font-bold text-gray-800">Pay Full Amount</span>
+              <input type="radio" checked={paymentMode === 'OnlineFull'} readOnly className="accent-haveli-primary" />
+              <span className="font-bold text-haveli-heading">Full Settle</span>
             </div>
-            <span className="font-black text-green-700">₹{finalTotals.grandTotal.toLocaleString()}</span>
+            <span className="font-bold text-haveli-primary text-lg">₹{finalTotals.grandTotal.toLocaleString()}</span>
           </div>
-          <p className="text-xs text-gray-500 mt-2 ml-7">Room is instantly locked and assigned.</p>
+          <p className="text-[10px] text-haveli-muted mt-2 ml-7 uppercase tracking-widest font-medium">Suite inventory is locked immediately.</p>
         </div>
 
         {/* 50% Advance */}
         <div
           onClick={() => setPaymentMode('OnlinePartial')}
-          className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'OnlinePartial' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+          className={`border h-24 rounded-xl p-6 cursor-pointer transition flex flex-col justify-center ${paymentMode === 'OnlinePartial' ? 'border-haveli-primary bg-haveli-section shadow-sm' : 'border-haveli-border bg-white hover:border-haveli-accent'}`}
         >
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <input type="radio" checked={paymentMode === 'OnlinePartial'} readOnly className="text-blue-600" />
-              <span className="font-bold text-gray-800">Pay 50% Advance</span>
+              <input type="radio" checked={paymentMode === 'OnlinePartial'} readOnly className="accent-haveli-primary" />
+              <span className="font-bold text-haveli-heading">50% Advance Deposit</span>
             </div>
-            <span className="font-black text-blue-700">₹{(finalTotals.grandTotal / 2).toLocaleString()}</span>
+            <span className="font-bold text-haveli-primary text-lg">₹{(finalTotals.grandTotal / 2).toLocaleString()}</span>
           </div>
-          <p className="text-xs text-gray-500 mt-2 ml-7">Room is instantly locked and assigned. Pay rest at check-in.</p>
+          <p className="text-[10px] text-haveli-muted mt-2 ml-7 uppercase tracking-widest font-medium">Lock suite now. Settle balance at arrival.</p>
         </div>
 
         {/* Pay at Hotel */}
         <div
           onClick={() => setPaymentMode('PayAtHotel')}
-          className={`border-2 rounded-xl p-4 cursor-pointer transition ${paymentMode === 'PayAtHotel' ? 'border-amber-600 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}
+          className={`border rounded-xl p-6 cursor-pointer transition flex flex-col justify-center ${paymentMode === 'PayAtHotel' ? 'border-haveli-accent bg-haveli-section shadow-sm' : 'border-haveli-border bg-white hover:border-haveli-accent'}`}
         >
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center h-12">
             <div className="flex items-center space-x-3">
-              <input type="radio" checked={paymentMode === 'PayAtHotel'} readOnly className="text-amber-600" />
-              <span className="font-bold text-gray-800">Pay at Hotel</span>
+              <input type="radio" checked={paymentMode === 'PayAtHotel'} readOnly className="accent-haveli-accent" />
+              <span className="font-bold text-haveli-heading">Settle at Arrival</span>
             </div>
-            <span className="font-black text-gray-500">₹0 Now</span>
+            <span className="font-medium text-haveli-muted text-xs italic">No initial deposit</span>
           </div>
           {paymentMode === 'PayAtHotel' && (
-            <div className="mt-3 ml-7 bg-red-100 text-red-800 p-3 rounded-lg text-xs font-bold leading-relaxed border border-red-200">
-              <i className="fas fa-exclamation-triangle mr-2"></i>
-              You are choosing Pay at Hotel. Room availability is subject to availability at the time of arrival. To confirm and lock your room, please pay an advance now.
+            <div className="mt-4 ml-7 bg-[#fef2f2] text-[#991b1b] p-4 rounded-lg text-[10px] font-bold border border-[#fee2e2] leading-relaxed uppercase tracking-widest">
+              <i className="fas fa-exclamation-circle mr-2 text-xs"></i>
+              Suites are allocated based on availability upon arrival. We recommend an advance for guaranteed booking.
             </div>
           )}
         </div>
       </div>
 
       {paymentMode !== 'PayAtHotel' && (
-        <div className="mb-6 animate-fadeIn">
-          <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Online Payment Method</label>
-          <div className="grid grid-cols-4 gap-2">
+        <div className="mb-10 animate-fadeIn">
+          <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.25em] mb-4">Method of Settlement</label>
+          <div className="grid grid-cols-4 gap-3">
             {[
               { m: 'Card', i: 'fa-credit-card' },
-              { m: 'GPay', i: 'fab fa-google-pay' },
-              { m: 'UPI', i: 'fa-mobile-alt' },
+              { m: 'GPay', i: 'fa-google' },
+              { m: 'UPI', i: 'fa-mobile' },
               { m: 'Wallet', i: 'fa-wallet' }
             ].map(item => (
               <div
                 key={item.m}
                 onClick={() => setMethod(item.m)}
-                className={`border-2 rounded-lg py-2 text-center cursor-pointer transition-all ${method === item.m ? 'border-green-600 bg-green-50 ring-2 ring-green-50' : 'border-gray-100 hover:border-gray-200'}`}
+                className={`border rounded-xl py-4 text-center cursor-pointer transition ${method === item.m ? 'border-haveli-accent bg-haveli-section text-haveli-accent shadow-inner' : 'border-haveli-border text-haveli-muted hover:border-haveli-accent'}`}
               >
-                <i className={`fas ${item.i} text-lg mb-1 ${method === item.m ? 'text-green-600' : 'text-gray-400'}`}></i>
-                <p className="text-[9px] font-black uppercase">{item.m}</p>
+                <i className={`fas ${item.i} text-xl mb-1`}></i>
+                <p className="text-[9px] font-bold uppercase tracking-tighter">{item.m}</p>
               </div>
             ))}
           </div>
@@ -588,12 +585,12 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
       <div className="mt-auto">
         <button
           onClick={() => onConfirm(paymentMode, amountToPay)}
-          className={`w-full text-white py-4 rounded-xl font-black text-lg transition shadow-xl hover:scale-[1.02] active:scale-[0.98] ${paymentMode === 'PayAtHotel' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}`}
+          className={`w-full h-14 rounded-xl font-bold text-lg transition shadow-sm hover:shadow-md tracking-wider ${paymentMode === 'PayAtHotel' ? 'border border-haveli-accent text-haveli-accent hover:bg-haveli-bg uppercase text-sm' : 'bg-haveli-primary text-white hover:bg-haveli-primaryHover'}`}
         >
           {paymentMode === 'PayAtHotel' ? (
-            <>RESERVE WITHOUT LOCKING</>
+            <>Finalize Reservation</>
           ) : (
-            <><i className="fas fa-lock mr-2"></i>CONFIRM & PAY ₹{amountToPay.toLocaleString()}</>
+            <><i className="fas fa-lock mr-2 text-sm opacity-80"></i>Settle ₹{amountToPay.toLocaleString()}</>
           )}
         </button>
       </div>

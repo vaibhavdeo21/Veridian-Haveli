@@ -24,25 +24,27 @@ const Login = () => {
   };
 
   return (
-    <main className="pt-32 pb-16 min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="fas fa-user-circle text-amber-600 text-3xl"></i>
+    <main className="pt-32 pb-16 min-h-screen bg-haveli-bg flex items-center justify-center">
+      <div className="lux-card max-w-md w-full">
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-haveli-section border border-haveli-border rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+            {/* FIXED: Changed to fas to ensure icon renders correctly */}
+            <i className="fas fa-user-circle text-haveli-accent text-4xl"></i>
           </div>
-          <h2 className="text-3xl font-bold font-display text-gray-800">Welcome Back</h2>
-          <p className="text-gray-500 mt-2">Log in to manage your bookings and orders</p>
+          <h2 className="text-3xl font-bold font-display text-haveli-heading">Welcome Back</h2>
+          <p className="text-haveli-muted mt-3 font-light">Sign in to manage your heritage stay</p>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold mb-1 text-gray-700">Username</label>
+            <label className="block text-sm font-semibold mb-2 text-haveli-heading uppercase tracking-wider">Username</label>
             <div className="relative">
-              <i className="fas fa-user absolute left-4 top-3.5 text-gray-400"></i>
+              {/* FIXED: Changed to fas */}
+              <i className="fas fa-user absolute left-4 top-4 text-haveli-accent text-sm"></i>
               <input 
                 type="text" 
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                placeholder="Enter username (e.g., admin)"
+                className="w-full h-12 pl-12 pr-4 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-body font-light transition-all"
+                placeholder="Enter username"
                 value={credentials.username}
                 onChange={(e) => setCredentials({...credentials, username: e.target.value})}
                 required
@@ -50,12 +52,13 @@ const Login = () => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-1 text-gray-700">Password</label>
+            <label className="block text-sm font-semibold mb-2 text-haveli-heading uppercase tracking-wider">Password</label>
             <div className="relative">
-              <i className="fas fa-lock absolute left-4 top-3.5 text-gray-400"></i>
+              {/* FIXED: Changed to fas */}
+              <i className="fas fa-lock absolute left-4 top-4 text-haveli-accent text-sm"></i>
               <input 
                 type="password" 
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full h-12 pl-12 pr-4 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-body font-light transition-all"
                 placeholder="Enter password"
                 value={credentials.password}
                 onChange={(e) => setCredentials({...credentials, password: e.target.value})}
@@ -63,17 +66,18 @@ const Login = () => {
               />
             </div>
           </div>
+          {/* UPDATED: Added Design System Button Classes */}
           <button 
             type="submit" 
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center mt-4 shadow-lg"
+            className="btn btn-secondary btn-block h-12 mt-6 shadow-sm tracking-wide"
           >
-            <i className="fas fa-sign-in-alt mr-2"></i> Log In
+            <i className="fas fa-sign-in-alt mr-2"></i> Sign In
           </button>
         </form>
         
-        <div className="mt-6 text-center text-sm text-gray-600 border-t pt-6">
+        <div className="mt-8 text-center text-sm text-haveli-muted border-t border-haveli-border pt-6 font-light">
           Don't have an account yet? <br/>
-          <Link to="/register" className="text-amber-600 font-bold hover:underline mt-2 inline-block">Create an Account</Link>
+          <Link to="/register" className="text-haveli-accent font-bold hover:text-haveli-accentHover mt-2 inline-block transition">Create an Account</Link>
         </div>
       </div>
     </main>

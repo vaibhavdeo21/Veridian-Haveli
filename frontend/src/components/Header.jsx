@@ -18,22 +18,22 @@ const Header = () => {
   const closeMenu = () => setIsMenuOpen(false);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 bg-white shadow-md z-50 transition-all duration-300 ${isScrolled ? 'scrolled' : ''}`}>
-      <nav className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-2" onClick={closeMenu}>
-          <div className="bg-gradient-to-br from-amber-600 to-amber-800 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center font-bold text-lg sm:text-xl">
-            JH
+    <header className={`fixed top-0 left-0 right-0 bg-haveli-card border-b border-haveli-border z-50 transition-all duration-300 ${isScrolled ? 'shadow-sm py-2' : 'py-4'}`}>
+      <nav className="container mx-auto px-6 flex items-center justify-between">
+        <Link to="/" className="flex items-center space-x-3" onClick={closeMenu}>
+          <div className="bg-haveli-deep text-haveli-accent w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-display font-bold text-lg sm:text-xl border border-haveli-border">
+            VH
           </div>
-          <span className="text-xl sm:text-2xl font-bold font-display text-amber-800">
-            Jhankar Hotel
+          <span className="text-xl sm:text-2xl font-bold font-display text-haveli-heading tracking-wide">
+            Veridian Haveli
           </span>
         </Link>
 
         <ul className="hidden lg:flex items-center space-x-8">
-          <li><a href="/#home" className="hover:text-amber-600 transition font-medium">Home</a></li>
-          <li><a href="/#about" className="hover:text-amber-600 transition font-medium">About Us</a></li>
-          <li><a href="/#rooms" className="hover:text-amber-600 transition font-medium">Rooms</a></li>
-          <li><a href="/#gallery" className="hover:text-amber-600 transition font-medium">Gallery</a></li>
+          <li><a href="/#home" className="text-haveli-body hover:text-haveli-primary transition font-medium">Home</a></li>
+          <li><a href="/#about" className="text-haveli-body hover:text-haveli-primary transition font-medium">About Us</a></li>
+          <li><a href="/#rooms" className="text-haveli-body hover:text-haveli-primary transition font-medium">Suites</a></li>
+          <li><a href="/#gallery" className="text-haveli-body hover:text-haveli-primary transition font-medium">Gallery</a></li>
         </ul>
 
         <div className="flex items-center space-x-2 sm:space-x-4">
@@ -41,38 +41,38 @@ const Header = () => {
             <>
               {/* Logged in View */}
               {user.role !== 'admin' && (
-                <Link to="/profile" onClick={closeMenu} className="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-md font-semibold text-sm transition hover:bg-amber-200 hidden sm:block">
-                  <i className="fas fa-user-circle mr-2"></i>My Profile
+                <Link to="/profile" onClick={closeMenu} className="text-haveli-primary hover:text-haveli-primaryHover font-medium px-3 py-1.5 hidden sm:flex items-center">
+                  <i className="far fa-user-circle mr-2 text-lg"></i>My Profile
                 </Link>
               )}
-              <Link to="/booking" onClick={closeMenu} className="text-gray-700 hover:text-amber-600 font-semibold text-sm transition hidden sm:block">
-                Book Room
+              <Link to="/booking" onClick={closeMenu} className="text-haveli-body hover:text-haveli-primary font-medium text-sm transition hidden sm:block">
+                Reserve Suite
               </Link>
-              <Link to="/order" onClick={closeMenu} className="text-gray-700 hover:text-amber-600 font-semibold text-sm transition hidden sm:block">
+              <Link to="/order" onClick={closeMenu} className="text-haveli-body hover:text-haveli-primary font-medium text-sm transition hidden sm:block">
                 Order Food
               </Link>
               
-              <div className="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-md font-semibold text-sm hidden md:block">
-                Hi, {user.username}
+              <div className="text-haveli-body border border-haveli-border px-4 py-2 rounded-xl font-medium text-sm hidden md:block">
+                Hi, <span className="text-haveli-primary">{user.username}</span>
               </div>
               
               {user.role === 'admin' && (
-                <Link to="/admin" onClick={closeMenu} className="bg-gray-800 hover:bg-black text-white px-3 py-1.5 rounded-md font-semibold text-sm transition shadow-md hidden sm:block">
+                <Link to="/admin" onClick={closeMenu} className="bg-haveli-deep hover:bg-haveli-primary text-white px-6 h-10 rounded-xl font-medium text-sm transition flex items-center hidden sm:flex">
                   Dashboard
                 </Link>
               )}
               
-              <button onClick={() => { logout(); closeMenu(); }} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md font-semibold text-sm transition shadow-md">
+              <button onClick={() => { logout(); closeMenu(); }} className="text-haveli-muted hover:text-red-500 font-medium text-sm transition ml-2">
                 Logout
               </button>
             </>
           ) : (
             <>
               {/* Logged out View */}
-              <Link to="/login" onClick={closeMenu} className="text-gray-700 hover:text-amber-600 font-semibold text-sm transition">
+              <Link to="/login" onClick={closeMenu} className="text-haveli-body hover:text-haveli-primary font-medium text-sm transition">
                 Log In
               </Link>
-              <Link to="/register" onClick={closeMenu} className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-md font-semibold text-sm sm:text-base transition shadow-md hover:shadow-lg">
+              <Link to="/register" onClick={closeMenu} className="bg-haveli-accent hover:bg-haveli-accentHover text-white px-6 h-10 rounded-xl font-medium text-sm sm:text-base transition flex items-center justify-center">
                 Create Account
               </Link>
             </>
@@ -80,26 +80,26 @@ const Header = () => {
 
           <button
             id="mobileMenuBtn"
-            className="lg:hidden text-2xl text-gray-700"
+            className="lg:hidden text-2xl text-haveli-heading"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+            <i className={`far ${isMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
           </button>
         </div>
       </nav>
 
-      <div id="mobileMenu" className={`lg:hidden bg-white border-t ${isMenuOpen ? 'block' : 'hidden'}`}>
-        <ul className="container mx-auto px-4 py-3 space-y-2 text-gray-700">
-          <li><a href="/#home" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium">Home</a></li>
-          <li><a href="/#about" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium">About Us</a></li>
-          <li><a href="/#rooms" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium">Rooms</a></li>
-          <li><a href="/#gallery" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium">Gallery</a></li>
+      <div id="mobileMenu" className={`lg:hidden bg-haveli-card border-t border-haveli-border transition-all duration-300 ${isMenuOpen ? 'block' : 'hidden'}`}>
+        <ul className="container mx-auto px-6 py-4 space-y-4 text-haveli-body">
+          <li><a href="/#home" onClick={closeMenu} className="block hover:text-haveli-primary transition font-medium">Home</a></li>
+          <li><a href="/#about" onClick={closeMenu} className="block hover:text-haveli-primary transition font-medium">About Us</a></li>
+          <li><a href="/#rooms" onClick={closeMenu} className="block hover:text-haveli-primary transition font-medium">Rooms</a></li>
+          <li><a href="/#gallery" onClick={closeMenu} className="block hover:text-haveli-primary transition font-medium">Gallery</a></li>
           {user && (
             <>
-              {user.role !== 'admin' && <li><Link to="/profile" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium">My Profile</Link></li>}
-              <li><Link to="/booking" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium text-amber-600">Book Room</Link></li>
-              <li><Link to="/order" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium text-green-600">Order Food</Link></li>
-              {user.role === 'admin' && <li><Link to="/admin" onClick={closeMenu} className="block hover:text-amber-600 transition font-medium text-gray-900">Admin Dashboard</Link></li>}
+              {user.role !== 'admin' && <li><Link to="/profile" onClick={closeMenu} className="block hover:text-haveli-primary transition font-medium">My Profile</Link></li>}
+              <li><Link to="/booking" onClick={closeMenu} className="block text-haveli-primary font-medium">Reserve Suite</Link></li>
+              <li><Link to="/order" onClick={closeMenu} className="block text-haveli-accent font-medium">Order Food</Link></li>
+              {user.role === 'admin' && <li><Link to="/admin" onClick={closeMenu} className="block text-haveli-heading font-medium">Admin Dashboard</Link></li>}
             </>
           )}
         </ul>

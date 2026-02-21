@@ -1,3 +1,137 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ===== Luxury Font Import ===== */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ===== Color System ===== */
+:root{
+  --cream: #F4EFE7;
+  --cream-soft: #FBF8F2;
+  --emerald: #1E5F4E;
+  --emerald-dark: #0F2A23;
+  --gold: #C2A14D;
+  --gold-soft: #D8B96B;
+  --border-soft: #E7E1D6;
+  --text-dark: #2E2E2E;
+  --text-muted: #7A7A7A;
+}
+
+/* ===== Global Styling ===== */
+body{
+  font-family: 'Inter', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+}
+
+/* Luxury headings */
+h1,h2,h3,h4{
+  font-family: 'Playfair Display', serif;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Buttons ===== */
+.btn-primary{
+  background: var(--emerald);
+  color:white;
+  padding:10px 18px;
+  border-radius:10px;
+  transition:0.25s;
+}
+.btn-primary:hover{
+  background: var(--emerald-dark);
+}
+
+.btn-gold{
+  background: var(--gold);
+  color: var(--emerald-dark);
+  padding:10px 18px;
+  border-radius:10px;
+  font-weight:500;
+  transition:0.25s;
+}
+.btn-gold:hover{
+  background: var(--gold-soft);
+}
+
+/* ===== Card Style ===== */
+.lux-card{
+  background:white;
+  border:1px solid var(--border-soft);
+  border-radius:14px;
+  padding:24px;
+  transition:0.25s;
+}
+.lux-card:hover{
+  box-shadow:0 10px 25px rgba(0,0,0,0.06);
+}
+
+/* Header scroll effect */
+header.scrolled{
+  backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.92) !important;
+}
+
+/* ===== PROFESSIONAL BUTTON SYSTEM ===== */
+
+.btn{
+  padding:10px 18px;
+  border-radius:12px;
+  font-weight:500;
+  font-size:14px;
+  transition:all .25s ease;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+
+/* PRIMARY (PAY / CONFIRM) */
+.btn-primary{
+  background:#C2A14D;
+  color:#0F2A23;
+}
+.btn-primary:hover{
+  background:#D8B96B;
+  transform:translateY(-1px);
+}
+
+/* SECONDARY (BOOK / UPDATE) */
+.btn-secondary{
+  background:#1E5F4E;
+  color:white;
+}
+.btn-secondary:hover{
+  background:#0F2A23;
+}
+
+/* OUTLINE (VIEW / OPEN) */
+.btn-outline{
+  border:1px solid #E7E1D6;
+  color:#1E5F4E;
+  background:white;
+}
+.btn-outline:hover{
+  background:#F4EFE7;
+}
+
+/* DANGER (DELETE / CANCEL) */
+.btn-danger{
+  background:#B91C1C;
+  color:white;
+}
+.btn-danger:hover{
+  background:#991B1B;
+}
+
+/* SMALL VARIANT */
+.btn-sm{
+  padding:6px 12px;
+  font-size:13px;
+}
+
+/* FULL WIDTH (for payment) */
+.btn-block{
+  width:100%;
+}
