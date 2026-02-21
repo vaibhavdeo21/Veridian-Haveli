@@ -67,47 +67,95 @@ const AddOrderModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">Add New Food Order</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <i className="fas fa-times"></i>
+    <div className="fixed inset-0 bg-haveli-deep/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+      <div className="bg-white rounded-xl border border-haveli-border shadow-2xl max-w-md w-full p-8 animate-fadeIn relative overflow-hidden">
+        {/* Decorative Top Border */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-haveli-accent opacity-50"></div>
+
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-haveli-section rounded-full flex items-center justify-center border border-haveli-border">
+              <i className="fas fa-utensils text-haveli-accent"></i>
+            </div>
+            <h3 className="text-2xl font-bold font-display text-haveli-heading tracking-wide">Add Food Order</h3>
+          </div>
+          <button onClick={onClose} className="text-haveli-muted hover:text-red-500 transition-colors p-2">
+            <i className="fas fa-times text-lg"></i>
           </button>
         </div>
         
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
-              <input type="text" id="roomNo" value={formData.roomNo} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Room Number</label>
+              <input 
+                type="text" id="roomNo" value={formData.roomNo} onChange={handleChange} 
+                className="w-full px-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-bold text-haveli-heading" 
+                placeholder="e.g. 101"
+                required 
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-              <input type="text" id="customerName" value={formData.customerName} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required placeholder="Auto-fills if room is occupied..." />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Food Items</label>
-              <input type="text" id="foodItems" value={formData.foodItems} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <input type="number" id="quantity" value={formData.quantity} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" min="1" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount (₹)</label>
-              <input type="number" id="totalAmount" value={formData.totalAmount} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" min="0" step="0.01" required />
+              <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Quantity</label>
+              <input 
+                type="number" id="quantity" value={formData.quantity} onChange={handleChange} 
+                className="w-full px-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+                min="1" 
+                required 
+              />
             </div>
           </div>
-          <div className="mt-6 flex justify-end space-x-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
-              Cancel
+
+          <div>
+            <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Customer Name</label>
+            <input 
+              type="text" id="customerName" value={formData.customerName} onChange={handleChange} 
+              className="w-full px-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-medium text-haveli-primary" 
+              required 
+              placeholder="Auto-fills from room status..." 
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Food Selection</label>
+            <div className="relative">
+               <i className="fas fa-hamburger absolute left-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs opacity-60"></i>
+               <input 
+                type="text" id="foodItems" value={formData.foodItems} onChange={handleChange} 
+                className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+                placeholder="Dishes (comma separated)"
+                required 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Total Amount (₹)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-haveli-heading font-bold text-sm">₹</span>
+              <input 
+                type="number" id="totalAmount" value={formData.totalAmount} onChange={handleChange} 
+                className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-bold text-haveli-heading" 
+                min="0" step="0.01" 
+                required 
+              />
+            </div>
+          </div>
+
+          <div className="pt-6 flex space-x-4">
+            <button type="button" onClick={onClose} className="btn btn-outline flex-1 h-12 shadow-sm">
+              Dismiss
             </button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-              Add Order
+            <button type="submit" className="btn btn-primary flex-1 h-12 shadow-md">
+              <i className="fas fa-plus-circle mr-2 text-xs"></i> Add Order
             </button>
           </div>
         </form>
+        
+        <p className="text-center text-[9px] text-haveli-muted mt-6 uppercase tracking-tighter">
+          <i className="fas fa-info-circle mr-1 text-haveli-accent"></i>
+          This order will be added to the guest's folio immediately.
+        </p>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import usePageTitle from "../hooks/usePageTitle";
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -12,6 +13,7 @@ const slides = [
 ];
 
 const Home = () => {
+  usePageTitle("VERIDIAN HAVELI | Welcome");
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
 

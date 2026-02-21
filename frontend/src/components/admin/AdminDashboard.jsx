@@ -1,3 +1,4 @@
+import usePageTitle from "../../hooks/usePageTitle";
 import React, { useMemo } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -6,6 +7,7 @@ import {
 import { useData } from '../../context/DataContext.jsx';
 
 const AdminDashboard = () => {
+  usePageTitle("Dashboard | VERIDIAN HAVELI");
   const { analyticsData, customers, rooms } = useData();
 
   // 1. Calculate High-Level Stats using database values
@@ -18,91 +20,95 @@ const AdminDashboard = () => {
       totalRevenue,
       gstAmount: totalRevenue * 0.18,
       grossTotal: totalRevenue * 1.18,
-      activeBookings: customers.filter(c => c.status === 'CheckedIn').length,
-      availableRooms: rooms.filter(r => r.availability !== 'Booked').length
+      activeBookings: customers.filter(c => (c.status || '').replace(/\s/g, "").toLowerCase() === 'checkedin').length,
+      availableRooms: rooms.filter(r => (r.availability || '').toLowerCase() !== 'booked').length
     };
   }, [customers, rooms]);
 
   return (
-    <div id="admin-dashboard-home" className="p-6 space-y-8 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-end">
+    <div id="admin-dashboard-home" className="p-8 space-y-10 bg-haveli-bg min-h-screen">
+      <div className="flex justify-between items-end border-b border-haveli-border pb-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tighter uppercase">Dashboard</h1>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Jhankar Hotel Real-time Analytics</p>
+          <p className="text-haveli-accent uppercase tracking-[0.3em] font-bold text-[10px] mb-2">Heritage Management</p>
+          <h1 className="text-4xl font-bold text-haveli-heading font-display tracking-tight uppercase">Dashboard</h1>
         </div>
         <div className="text-right">
-          <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full uppercase">Live Sync Active</span>
+          <span className="text-[10px] font-bold text-haveli-primary bg-haveli-section border border-haveli-border px-4 py-1.5 rounded-full uppercase tracking-tighter">
+            <i className="fas fa-sync-alt fa-spin mr-2 opacity-50"></i>Live Inventory Sync
+          </span>
         </div>
       </div>
 
       {/* --- KPI Cards Section --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         <StatCard 
           title="Total Net Revenue" 
           value={`₹${stats.totalRevenue.toLocaleString()}`} 
           trend="+12.5%" 
           icon="fa-wallet" 
-          color="text-amber-600" 
+          color="text-haveli-primary" 
         />
         <StatCard 
-          title="In-House Guests" 
+          title="In-Residence" 
           value={stats.activeBookings} 
-          trend="Current" 
+          trend="Active" 
           icon="fa-user-check" 
           color="text-blue-600" 
         />
         <StatCard 
-          title="Available Rooms" 
+          title="Suite Inventory" 
           value={stats.availableRooms} 
-          trend="Inventory" 
+          trend="Available" 
           icon="fa-door-open" 
-          color="text-green-600" 
+          color="text-haveli-accent" 
         />
         <StatCard 
           title="Estimated GST" 
           value={`₹${stats.gstAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} 
           trend="18% Rate" 
           icon="fa-file-invoice-dollar" 
-          color="text-red-600" 
+          color="text-red-700" 
         />
       </div>
 
       {/* --- Charts Section --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         
         {/* Revenue Growth Area Chart */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tighter">Revenue Trend (Last 7 Days)</h3>
-            <i className="fas fa-chart-line text-gray-300"></i>
+        <div className="lux-card bg-white p-8 rounded-2xl shadow-sm">
+          <div className="flex justify-between items-center mb-10">
+            <h3 className="text-sm font-bold text-haveli-heading uppercase tracking-widest font-display">Revenue Growth (7D)</h3>
+            <div className="w-8 h-8 bg-haveli-section rounded-full flex items-center justify-center border border-haveli-border">
+              <i className="fas fa-chart-line text-haveli-accent text-xs"></i>
+            </div>
           </div>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={analyticsData}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#d97706" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#1E5F4E" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#1E5F4E" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E7E1D6" />
                 <XAxis 
                   dataKey="_id" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} 
+                  tick={{fontSize: 10, fontWeight: 'bold', fill: '#7A7A7A'}} 
                   dy={10}
                 />
                 <YAxis hide />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontWeight: 'bold', color: '#d97706' }}
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #E7E1D6', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.05)', backgroundColor: '#FBF8F2' }}
+                  itemStyle={{ fontWeight: 'bold', color: '#1E5F4E', fontSize: '12px' }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="dailyRevenue" 
-                  stroke="#d97706" 
-                  strokeWidth={4}
+                  stroke="#1E5F4E" 
+                  strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorRev)" 
                 />
@@ -112,27 +118,29 @@ const AdminDashboard = () => {
         </div>
 
         {/* Booking Volume Bar Chart */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tighter">Daily Booking Volume</h3>
-            <i className="fas fa-bed text-gray-300"></i>
+        <div className="lux-card bg-white p-8 rounded-2xl shadow-sm">
+          <div className="flex justify-between items-center mb-10">
+            <h3 className="text-sm font-bold text-haveli-heading uppercase tracking-widest font-display">Daily Guest Volume</h3>
+            <div className="w-8 h-8 bg-haveli-section rounded-full flex items-center justify-center border border-haveli-border">
+              <i className="fas fa-bed text-haveli-accent text-xs"></i>
+            </div>
           </div>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analyticsData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E7E1D6" />
                 <XAxis 
                   dataKey="_id" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} 
+                  tick={{fontSize: 10, fontWeight: 'bold', fill: '#7A7A7A'}} 
                   dy={10}
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#9ca3af'}} />
-                <Tooltip cursor={{fill: '#fff7ed'}} />
-                <Bar dataKey="bookingCount" fill="#d97706" radius={[6, 6, 0, 0]} barSize={30}>
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#7A7A7A'}} />
+                <Tooltip cursor={{fill: '#FBF8F2'}} contentStyle={{ borderRadius: '12px', border: '1px solid #E7E1D6' }} />
+                <Bar dataKey="bookingCount" fill="#C2A14D" radius={[6, 6, 0, 0]} barSize={24}>
                   {analyticsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === analyticsData.length - 1 ? '#d97706' : '#fbbf24'} />
+                    <Cell key={`cell-${index}`} fill={index === analyticsData.length - 1 ? '#1E5F4E' : '#C2A14D'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -143,19 +151,20 @@ const AdminDashboard = () => {
       </div>
 
       {/* --- Recent Activity Summary --- */}
-      <div className="bg-gray-800 p-8 rounded-3xl shadow-2xl text-white flex flex-col md:flex-row justify-between items-center">
-        <div className="mb-4 md:mb-0">
-          <h3 className="text-xl font-black tracking-tight">System Status: Optimal</h3>
-          <p className="text-gray-400 text-xs font-bold uppercase">All database connections are active and syncing</p>
+      <div className="bg-haveli-dark p-10 rounded-2xl shadow-2xl text-white flex flex-col md:flex-row justify-between items-center relative overflow-hidden group">
+        <div className="absolute top-0 left-0 w-1 h-full bg-haveli-accent"></div>
+        <div className="mb-6 md:mb-0 relative z-10">
+          <h3 className="text-2xl font-bold font-display tracking-wide mb-1">System Pulse: Optimal</h3>
+          <p className="text-haveli-accent/60 text-[10px] font-bold uppercase tracking-[0.2em]">All heritage database nodes are currently healthy</p>
         </div>
-        <div className="flex gap-4">
-          <div className="text-center px-6 border-r border-gray-700">
-            <p className="text-[10px] font-black text-gray-500 uppercase">Gross Collection</p>
-            <p className="text-xl font-black">₹{stats.grossTotal.toLocaleString()}</p>
+        <div className="flex gap-10 relative z-10">
+          <div className="text-center px-10 border-r border-white/10">
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Gross Collection</p>
+            <p className="text-3xl font-display font-bold text-haveli-accent">₹{stats.grossTotal.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
           </div>
           <div className="text-center px-6">
-            <p className="text-[10px] font-black text-gray-500 uppercase">Pending Bills</p>
-            <p className="text-xl font-black text-amber-500">{customers.filter(c => c.paymentStatus === 'Pending').length}</p>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Pending Folios</p>
+            <p className="text-3xl font-display font-bold text-red-400">{customers.filter(c => c.paymentStatus === 'Pending').length}</p>
           </div>
         </div>
       </div>
@@ -163,17 +172,17 @@ const AdminDashboard = () => {
   );
 };
 
-// Helper Sub-component for KPI Cards
+// Helper Sub-component for KPI Cards using Design System
 const StatCard = ({ title, value, trend, icon, color }) => (
-  <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 transition-transform hover:scale-[1.02]">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center ${color}`}>
-        <i className={`fas ${icon} text-lg`}></i>
+  <div className="lux-card bg-white p-8 rounded-2xl transition-all duration-500 hover:-translate-y-1 group">
+    <div className="flex justify-between items-start mb-6">
+      <div className={`w-12 h-12 rounded-xl bg-haveli-section border border-haveli-border flex items-center justify-center transition-colors group-hover:border-haveli-accent`}>
+        <i className={`fas ${icon} text-xl ${color}`}></i>
       </div>
-      <span className="text-[10px] font-black text-green-500 bg-green-50 px-2 py-0.5 rounded-lg">{trend}</span>
+      <span className="text-[9px] font-bold text-haveli-primary bg-[#ecfdf5] border border-haveli-primary/20 px-3 py-1 rounded-full uppercase tracking-tighter">{trend}</span>
     </div>
-    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{title}</p>
-    <h3 className="text-2xl font-black text-gray-800">{value}</h3>
+    <p className="text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">{title}</p>
+    <h3 className="text-3xl font-bold text-haveli-heading font-display">{value}</h3>
   </div>
 );
 

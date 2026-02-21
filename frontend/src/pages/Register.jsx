@@ -1,8 +1,10 @@
+import usePageTitle from "../hooks/usePageTitle";
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const Register = () => {
+  usePageTitle("Create Account | VERIDIAN HAVELI");
   const [details, setDetails] = useState({ username: '', email: '', password: '' });
   const { register } = useAuth();
 

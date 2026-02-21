@@ -1,3 +1,4 @@
+import usePageTitle from "../hooks/usePageTitle";
 import React, { useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -5,9 +6,10 @@ import { useData } from '../context/DataContext.jsx';
 import ChangePasswordModal from '../components/ChangePasswordModal.jsx';
 
 const UserProfile = () => {
+  usePageTitle("My Stay | VERIDIAN HAVELI");
   const { user } = useAuth();
   const { customers } = useData();
-  
+
   const [activeTab, setActiveTab] = useState('stays');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
@@ -22,8 +24,8 @@ const UserProfile = () => {
     today.setHours(0, 0, 0, 0);
 
     // Filter bookings belonging to the logged-in user (matching by username or email)
-    const userBookings = customers.filter(c => 
-      c.email === user.email || 
+    const userBookings = customers.filter(c =>
+      c.email === user.email ||
       c.username === user.username ||
       (c.guestName && c.guestName.toLowerCase().includes(user.username.toLowerCase()))
     );
@@ -38,10 +40,10 @@ const UserProfile = () => {
 
       if (normalizedStatus === 'checkedin') {
         current.push(booking);
-      } 
+      }
       else if (normalizedStatus === 'checkedout' || normalizedStatus === 'cancelled') {
         past.push(booking);
-      } 
+      }
       else if (normalizedStatus === 'booked') {
         // If the checkout date has already passed, automatically move to Past
         if (checkOutDate < today) {
@@ -64,12 +66,12 @@ const UserProfile = () => {
   // Room totalAmount ALREADY includes GST from the online booking step.
   // We only add GST to food/additional charges, preventing the "Surprise GST" bug.
   const calculateFinancials = (booking) => {
-    const roomTotalIncGST = booking.totalAmount || 0; 
+    const roomTotalIncGST = booking.totalAmount || 0;
     const foodTotal = booking.foodCharges || 0;
     const foodGST = foodTotal * 0.18;
     const lateNightFee = booking.lateNightFee || 0;
     const checkOutLateFee = booking.lateFee || 0;
-    
+
     const grandTotal = roomTotalIncGST + foodTotal + foodGST + lateNightFee + checkOutLateFee;
     const amountPaid = booking.amountPaid || 0;
     const balance = grandTotal - amountPaid;
@@ -80,7 +82,7 @@ const UserProfile = () => {
   return (
     <main className="pt-32 pb-16 bg-haveli-bg min-h-screen">
       <div className="max-w-6xl mx-auto px-6">
-        
+
         {/* Header Section */}
         <div className="lux-card border-haveli-border p-10 mb-10 flex items-center justify-between shadow-sm">
           <div className="flex items-center space-x-8">
@@ -97,14 +99,14 @@ const UserProfile = () => {
 
         {/* Navigation Tabs */}
         <div className="flex space-x-8 mb-10 border-b border-haveli-border">
-          <button 
+          <button
             onClick={() => setActiveTab('stays')}
             className={`pb-4 font-display font-bold text-xl transition-all relative ${activeTab === 'stays' ? 'text-haveli-heading' : 'text-haveli-muted hover:text-haveli-heading'}`}
           >
             My Stays
             {activeTab === 'stays' && <div className="absolute bottom-0 left-0 w-full h-1 bg-haveli-accent"></div>}
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('settings')}
             className={`pb-4 font-display font-bold text-xl transition-all relative ${activeTab === 'settings' ? 'text-haveli-heading' : 'text-haveli-muted hover:text-haveli-heading'}`}
           >
@@ -116,7 +118,7 @@ const UserProfile = () => {
         {/* --- STAYS TAB --- */}
         {activeTab === 'stays' && (
           <div className="space-y-16 animate-fadeIn">
-            
+
             {/* Current Stay */}
             {currentStays.length > 0 && (
               <section>
@@ -163,7 +165,7 @@ const UserProfile = () => {
         {activeTab === 'settings' && (
           <div className="lux-card p-10 animate-fadeIn max-w-2xl shadow-sm">
             <h2 className="text-2xl font-bold font-display text-haveli-heading mb-8 border-b border-haveli-border pb-4 uppercase tracking-widest text-sm">Security & Privacy</h2>
-            
+
             <div className="space-y-10">
               <div>
                 <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-3">Primary Account</label>
@@ -171,10 +173,10 @@ const UserProfile = () => {
                   {user.username}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-4">Credentials Management</label>
-                <button 
+                <button
                   onClick={() => setIsPasswordModalOpen(true)}
                   className="btn btn-secondary h-14 px-8 min-w-[240px] shadow-sm flex items-center justify-center"
                 >
@@ -189,9 +191,9 @@ const UserProfile = () => {
       </div>
 
       {/* Reusable Password Modal */}
-      <ChangePasswordModal 
-        isOpen={isPasswordModalOpen} 
-        onClose={() => setIsPasswordModalOpen(false)} 
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
       />
     </main>
   );
@@ -200,7 +202,7 @@ const UserProfile = () => {
 // --- Sub-Component: Stay Card ---
 const StayCard = ({ booking, financials, type }) => {
   const { roomTotalIncGST, foodTotal, lateNightFee, grandTotal, amountPaid, balance } = financials;
-  
+
   const statusColors = {
     current: 'bg-[#ecfdf5] text-haveli-primary border-haveli-primary/20',
     upcoming: 'bg-[#fffbeb] text-haveli-accent border-haveli-accent/20',
@@ -215,7 +217,7 @@ const StayCard = ({ booking, financials, type }) => {
 
   return (
     <div className={`lux-card border-2 overflow-hidden flex flex-col md:flex-row transition-all duration-500 hover:shadow-md ${type === 'current' ? 'border-haveli-primary' : 'border-haveli-border'}`}>
-      
+
       {/* Left: Suite Details */}
       <div className="p-8 md:w-1/3 bg-haveli-section flex flex-col justify-center border-r border-haveli-border">
         <span className={`self-start px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase border mb-6 ${statusColors[type]}`}>
@@ -225,7 +227,7 @@ const StayCard = ({ booking, financials, type }) => {
           {booking.roomNumber?.includes('Online') ? booking.roomNumber.replace('Online-', '') + ' Suite' : `Suite ${booking.roomNumber}`}
         </h3>
         <p className="text-xs text-haveli-muted uppercase tracking-tighter font-medium">Folio ID: {booking._id || booking.id}</p>
-        
+
         {type === 'upcoming' && booking.paymentMode === 'PayAtHotel' && (
           <div className="mt-6 bg-[#fef2f2] text-[#991b1b] p-4 rounded-xl text-[10px] font-bold border border-[#fee2e2] leading-relaxed uppercase tracking-wider">
             <i className="far fa-exclamation-circle mr-2"></i> Pay at Arrival selected. Allocation subject to availability.
@@ -271,21 +273,21 @@ const StayCard = ({ booking, financials, type }) => {
             </div>
           )}
         </div>
-        
+
         <div className="border-t border-haveli-border pt-4 mb-4 space-y-2">
           <div className="flex justify-between font-bold text-haveli-heading">
             <span className="text-[10px] uppercase tracking-widest">Total Bill:</span>
-            <span className="font-display font-bold">₹{grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            <span className="font-display font-bold">₹{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between font-medium text-sm text-haveli-primary italic">
             <span className="text-[10px] uppercase tracking-widest">Settle Advance:</span>
-            <span>- ₹{amountPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            <span>- ₹{amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
 
         <div className={`p-4 rounded-xl flex justify-between font-bold text-lg border ${balance > 0 ? 'bg-[#fef2f2] text-[#991b1b] border-[#fee2e2]' : 'bg-[#ecfdf5] text-haveli-primary border-[#d1fae5]'}`}>
           <span className="text-[10px] uppercase tracking-widest mt-1">Settle Folio:</span>
-          <span className="font-display">₹{Math.max(0, balance).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+          <span className="font-display">₹{Math.max(0, balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
 

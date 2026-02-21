@@ -20,7 +20,7 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="font-inter bg-gray-50 min-h-screen overflow-x-hidden">
+    <div className="font-sans bg-haveli-bg min-h-screen overflow-x-hidden antialiased">
       {/* Pass toggle function to Header */}
       <AdminHeader toggleSidebar={toggleSidebar} />
       
@@ -30,11 +30,14 @@ const AdminLayout = () => {
         
         {/* Main Content Area dynamically adjusts its margin */}
         <main 
-          className={`flex-1 p-4 md:p-6 transition-all duration-300 w-full ${
+          className={`flex-1 p-4 md:p-8 transition-all duration-500 w-full min-h-[calc(100vh-4rem)] ${
             isSidebarOpen ? 'ml-64' : 'ml-0'
           }`}
         >
-          <Outlet />
+          {/* Subtle page entry animation */}
+          <div className="animate-fadeIn">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

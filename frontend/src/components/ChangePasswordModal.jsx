@@ -49,47 +49,83 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-fadeIn">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-gray-800">Change Password</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition">
+    <div className="fixed inset-0 bg-haveli-deep/70 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+      {/* lux-card applied for heritage styling */}
+      <div className="bg-white rounded-xl border border-haveli-border shadow-2xl max-w-md w-full p-8 animate-fadeIn relative overflow-hidden">
+        {/* Decorative Top Border */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-haveli-accent opacity-50"></div>
+
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-haveli-section rounded-full flex items-center justify-center border border-haveli-border">
+              <i className="fas fa-shield-alt text-haveli-accent"></i>
+            </div>
+            <h3 className="text-2xl font-bold font-display text-haveli-heading tracking-wide">Update Security</h3>
+          </div>
+          <button onClick={onClose} className="text-haveli-muted hover:text-red-500 transition-colors p-2">
             <i className="fas fa-times text-lg"></i>
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Current Password</label>
-            <input 
-              type="password" id="currentPassword" value={formData.currentPassword} onChange={handleChange} 
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" required 
-            />
+            <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Current Credential</label>
+            <div className="relative">
+              <i className="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs opacity-60"></i>
+              <input 
+                type="password" id="currentPassword" value={formData.currentPassword} onChange={handleChange} 
+                className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+                placeholder="Enter current password"
+                required 
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">New Password</label>
-            <input 
-              type="password" id="newPassword" value={formData.newPassword} onChange={handleChange} 
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" required 
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Confirm New Password</label>
-            <input 
-              type="password" id="confirmPassword" value={formData.confirmPassword} onChange={handleChange} 
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none" required 
-            />
+
+          <div className="grid grid-cols-1 gap-6 pt-2 border-t border-haveli-border border-dashed">
+            <div>
+              <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">New Password</label>
+              <div className="relative">
+                <i className="fas fa-key absolute left-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs opacity-60"></i>
+                <input 
+                  type="password" id="newPassword" value={formData.newPassword} onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+                  placeholder="Minimum 6 characters"
+                  required 
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Confirm New Password</label>
+              <div className="relative">
+                <i className="fas fa-check-double absolute left-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs opacity-60"></i>
+                <input 
+                  type="password" id="confirmPassword" value={formData.confirmPassword} onChange={handleChange} 
+                  className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+                  placeholder="Re-enter new password"
+                  required 
+                />
+              </div>
+            </div>
           </div>
           
-          <div className="pt-4 flex space-x-3">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-bold">
-              Cancel
+          <div className="pt-6 flex space-x-4">
+            {/* btn-outline used for secondary action */}
+            <button type="button" onClick={onClose} className="btn btn-outline flex-1 h-12">
+              Dismiss
             </button>
-            <button type="submit" disabled={isLoading} className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-bold">
-              {isLoading ? <i className="fas fa-spinner fa-spin"></i> : 'Update'}
+            {/* btn-primary used for main action */}
+            <button type="submit" disabled={isLoading} className="btn btn-primary flex-1 h-12 shadow-md">
+              {isLoading ? <i className="fas fa-spinner fa-spin mr-2"></i> : <i className="fas fa-sync-alt mr-2 text-xs"></i>}
+              {isLoading ? 'Verifying...' : 'Update Folio'}
             </button>
           </div>
         </form>
+        
+        <p className="text-center text-[10px] text-haveli-muted mt-6 uppercase tracking-tighter">
+          <i className="fas fa-info-circle mr-1 text-haveli-accent"></i>
+          This action will secure your heritage account immediately.
+        </p>
       </div>
     </div>
   );

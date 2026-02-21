@@ -5,6 +5,7 @@ const ScrollToTop = () => {
 
   useEffect(() => {
     const toggleVisibility = () => {
+      // Logic to show button after scrolling 300px
       if (window.pageYOffset > 300) {
         setIsVisible(true);
       } else {
@@ -28,11 +29,15 @@ const ScrollToTop = () => {
     <button
       id="scrollTop"
       onClick={scrollToTop}
-      className={`fixed bottom-8 right-8 bg-amber-600 hover:bg-amber-700 text-white w-12 h-12 rounded-full shadow-lg items-center justify-center transition-opacity duration-300 z-40 ${
-        isVisible ? 'flex' : 'hidden'
+      aria-label="Scroll to top"
+      className={`fixed bottom-8 right-8 bg-haveli-deep hover:bg-haveli-primary text-haveli-accent hover:text-white w-12 h-12 rounded-full shadow-2xl items-center justify-center transition-all duration-500 z-[60] border border-haveli-accent/30 group active:scale-95 ${
+        isVisible ? 'flex opacity-100 translate-y-0' : 'hidden opacity-0 translate-y-10'
       }`}
     >
-      <i className="fas fa-arrow-up"></i>
+      {/* Decorative inner ring */}
+      <div className="absolute inset-1 rounded-full border border-haveli-accent/10 pointer-events-none"></div>
+      
+      <i className="fas fa-chevron-up transition-transform group-hover:-translate-y-1"></i>
     </button>
   );
 };

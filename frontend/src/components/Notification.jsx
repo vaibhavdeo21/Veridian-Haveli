@@ -8,34 +8,43 @@ const Notification = ({ message, type, onClose }) => {
     const timer = setTimeout(() => {
       setVisible(false);
       setTimeout(onClose, 300); 
-    }, 3000);
+    }, 4000); // Increased slightly for premium readability
 
     return () => clearTimeout(timer);
   }, [message, type, onClose]);
 
-  const baseClasses = 'fixed top-20 right-6 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 transform';
+  // Design System Classes
+  const baseClasses = 'fixed top-24 right-6 p-5 rounded-xl shadow-2xl z-[200] transition-all duration-500 transform border';
+  
   const typeClasses = {
-    success: 'bg-green-500 text-white',
-    error: 'bg-red-500 text-white',
-    info: 'bg-blue-500 text-white',
+    success: 'bg-[#ecfdf5] text-haveli-primary border-haveli-primary/20', // Emerald Soft
+    error: 'bg-[#fef2f2] text-red-700 border-red-200',                  // Red Soft
+    info: 'bg-haveli-section text-haveli-heading border-haveli-border',  // Heritage Cream
   };
 
   const iconClasses = {
     success: 'fa-check-circle',
-    error: 'fa-exclamation-triangle',
-    info: 'fa-info-circle',
+    error: 'fa-exclamation-circle',
+    info: 'fa-crown', // Luxury info icon
   };
 
   return (
     <div
       className={`${baseClasses} ${typeClasses[type]} ${
-        visible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        visible ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'
       }`}
     >
-      <div className="flex items-center">
-        <i className={`fas ${iconClasses[type]} mr-2`}></i>
-        <span>{message}</span>
+      <div className="flex items-center space-x-3">
+        {/* FIXED: Using fas prefix to ensure icons don't show as 'x' */}
+        <i className={`fas ${iconClasses[type]} text-lg`}></i>
+        <div className="flex flex-col">
+           <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60 mb-0.5">System Message</span>
+           <span className="text-sm font-medium tracking-wide">{message}</span>
+        </div>
       </div>
+      
+      {/* Decorative Golden Line at the bottom */}
+      <div className="absolute bottom-0 left-0 h-1 bg-haveli-accent rounded-b-xl opacity-40 transition-all duration-[4000ms] ease-linear" style={{ width: visible ? '100%' : '0%' }}></div>
     </div>
   );
 };

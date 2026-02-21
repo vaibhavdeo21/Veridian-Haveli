@@ -1,3 +1,4 @@
+import usePageTitle from "../hooks/usePageTitle";
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
@@ -5,10 +6,10 @@ import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 
 const roomConfig = {
-  single: { name: 'Classic Single Suite', price: 2500 },
-  double: { name: 'Veridian Double Suite', price: 4000 },
-  triple: { name: 'Royal Triple Suite', price: 5500 },
-  dormitory: { name: 'Heritage Dormitory', price: 1200 },
+  single: { name: 'Classic Single Suite', price: 25000 },
+  double: { name: 'Veridian Double Suite', price: 40000 },
+  triple: { name: 'Royal Triple Suite', price: 55000 },
+  dormitory: { name: 'Heritage Dormitory', price: 12000 },
 };
 
 const TAX_RATE = 0.18;
@@ -21,6 +22,7 @@ const getTomorrow = () => {
 };
 
 const Booking = () => {
+  usePageTitle("Book Your Stay | VERIDIAN HAVELI");
   const { addCustomer, rooms, customers } = useData();
   const { showNotification } = useNotification();
   const { user, updateActiveBooking } = useAuth();
@@ -179,6 +181,7 @@ const Booking = () => {
     goToStep(3);
   };
 
+  // --- FIXED: Prevent double GST by calculating baseAmount separately ---
   const handleConfirmBooking = async (paymentMode, amountPaid) => {
     let success = true;
     const finalGuestDetails = {
@@ -192,12 +195,27 @@ const Booking = () => {
     for (const [key, data] of Object.entries(roomTotals.details)) {
       if (data.quantity > 0) {
         for (let i = 0; i < data.quantity; i++) {
+          
+          // Calculate the base price per suite (subtotal includes duration and room count)
+          const basePricePerSuite = data.subtotal / data.quantity;
+          
+          // Apply repeat discount on the base price
+          const discountPerSuite = isRepeatCustomer ? (basePricePerSuite * 0.05) : 0;
+          const discountedBasePerSuite = basePricePerSuite - discountPerSuite;
+          
+          // Explicit tax calculation
+          const taxOnThisSuite = discountedBasePerSuite * TAX_RATE;
+
           const roomData = {
             baseType: data.baseType, 
             type: data.name,
-            totalAmount: (data.subtotal / data.quantity) * (1 + TAX_RATE) 
+            baseAmount: discountedBasePerSuite, // Send clean base price
+            taxAmount: taxOnThisSuite,          // Send clean tax amount
+            totalAmount: discountedBasePerSuite + taxOnThisSuite // Final total (matches paid)
           };
+
           const perRoomPaid = amountPaid / (Object.values(roomTotals.details).reduce((sum, d) => sum + d.quantity, 0));
+
           try {
             await addCustomer(finalGuestDetails, roomData, paymentMode, perRoomPaid);
           } catch (error) {
@@ -345,7 +363,7 @@ const Booking = () => {
 const RoomSelectionCard = ({ roomType, config, quantity, onRoomChange, subtotal, availableCount }) => (
   <div className="bg-haveli-card border border-haveli-border rounded-xl overflow-hidden transition-all duration-500 hover:shadow-xl flex flex-col h-full group">
     <div className="relative">
-      <img src={`https://images.unsplash.com/${config.price === 2500 ? 'photo-1631049307264-da0ec9d70304' : config.price === 4000 ? 'photo-1566665797739-1674de7a421a' : config.price === 5500 ? 'photo-1611892440504-42a792e24d32' : 'photo-1590490360182-c33d57733427'}?w=400&h=300&fit=crop`} alt={config.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-700" />
+      <img src={`https://images.unsplash.com/${config.price === 25000 ? 'photo-1631049307264-da0ec9d70304' : config.price === 40000 ? 'photo-1566665797739-1674de7a421a' : config.price === 55000 ? 'photo-1611892440504-42a792e24d32' : 'photo-1590490360182-c33d57733427'}?w=400&h=300&fit=crop`} alt={config.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-700" />
       <div className="absolute top-4 right-4 bg-haveli-card/90 backdrop-blur-sm border border-haveli-accent text-haveli-accent text-xs font-bold px-4 py-1.5 rounded-full">
         ₹{config.price.toLocaleString()} / night
       </div>

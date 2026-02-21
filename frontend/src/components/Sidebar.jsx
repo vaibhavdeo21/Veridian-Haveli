@@ -17,7 +17,8 @@ const SidebarLink = ({ to, icon, children }) => {
                     }`
                 }
             >
-                <i className={`far ${icon} w-6 text-center text-lg`}></i>
+                {/* FIXED: Switched to fas prefix to fix "x" symbol issue */}
+                <i className={`fas ${icon} w-6 text-center text-lg`}></i>
                 <span className="ml-3 whitespace-nowrap">{children}</span>
             </NavLink>
         </li>
@@ -40,7 +41,8 @@ const Sidebar = ({ isOpen }) => {
                     <div>
                         <div className="flex items-center space-x-4 p-4 mb-8 border border-haveli-border rounded-xl bg-haveli-section">
                             <div className="w-10 h-10 bg-haveli-primary text-white rounded-lg flex items-center justify-center shrink-0">
-                                <i className="far fa-user text-lg"></i>
+                                {/* FIXED: Switched to fas prefix */}
+                                <i className="fas fa-user text-lg"></i>
                             </div>
                             <div className="block overflow-hidden">
                                 <span className="font-display font-bold text-haveli-heading block truncate">{user?.username || 'Admin User'}</span>
@@ -66,7 +68,8 @@ const Sidebar = ({ isOpen }) => {
                             onClick={() => setIsPasswordModalOpen(true)}
                             className="w-full flex items-center px-6 h-12 text-haveli-muted hover:bg-haveli-bg hover:text-haveli-heading rounded-xl transition-colors font-medium border border-transparent hover:border-haveli-border"
                         >
-                            <i className="far fa-key w-6 text-center text-lg"></i>
+                            {/* FIXED: Switched to fas prefix */}
+                            <i className="fas fa-key w-6 text-center text-lg"></i>
                             <span className="ml-3">Security</span>
                         </button>
 
@@ -74,7 +77,8 @@ const Sidebar = ({ isOpen }) => {
                             onClick={logout}
                             className="w-full flex items-center px-6 h-12 text-[#b04a4a] hover:bg-[#b04a4a]/10 rounded-xl transition-colors font-medium"
                         >
-                            <i className="far fa-sign-out-alt w-6 text-center text-lg"></i>
+                            {/* FIXED: Switched to fas prefix */}
+                            <i className="fas fa-sign-out-alt w-6 text-center text-lg"></i>
                             <span className="ml-3">Sign Out</span>
                         </button>
                     </div>

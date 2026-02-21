@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext.jsx';
 import { useNotification } from '../../context/NotificationContext.jsx';
+import usePageTitle from '../../hooks/usePageTitle.jsx';
 import axios from 'axios';
 
 const CustomerProfile = () => {
@@ -16,6 +17,9 @@ const CustomerProfile = () => {
   const [idFile, setIdFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Set Dynamic Page Title
+  usePageTitle(customer ? `Guest: ${customer.guestName}` : "Guest Profile");
+
   useEffect(() => {
     const foundCustomer = customers.find(c => c._id === id || c.id === id || c.id === parseInt(id));
     if (foundCustomer) {
@@ -25,7 +29,12 @@ const CustomerProfile = () => {
     }
   }, [id, customers]);
 
-  if (!customer) return <div className="p-8 text-center text-gray-500 font-bold mt-10">Loading customer details...</div>;
+  if (!customer) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-haveli-muted">
+        <i className="fas fa-spinner fa-spin text-3xl mb-4 text-haveli-accent"></i>
+        <p className="font-display tracking-widest uppercase text-xs">Retrieving Resident Folio...</p>
+    </div>
+  );
 
   // Calculations
   const subtotal = (customer.totalAmount || 0) + (customer.foodCharges || 0);
@@ -38,8 +47,6 @@ const CustomerProfile = () => {
   const isCheckedOut = normalizedStatus === 'checkedout';
 
   // --- BULLETPROOF ROOM FILTERING LOGIC ---
-  
-  // 1. Extract the base keyword from the booking (e.g., 'single' from 'Online-SINGLE')
   const getExpectedRoomType = (roomString) => {
     if (!roomString) return null;
     const str = roomString.toLowerCase();
@@ -52,24 +59,18 @@ const CustomerProfile = () => {
 
   const expectedType = getExpectedRoomType(customer.roomNumber);
 
-  // 2. Filter the physical rooms based on availability and matching keyword
   const filteredRooms = rooms?.filter(r => {
-    // FIX: Treat undefined/missing availability as 'Available' so DB rooms show up
     const isAvailable = !r.availability || r.availability.toLowerCase() === 'available';
     if (!isAvailable) return false;
-    
-    // FIX: Keyword matching handles both "Single" and "Single Bed Room"
     if (expectedType && r.type) {
       return r.type.toLowerCase().includes(expectedType);
     }
-    
-    return true; // Fallback: show all available if expectedType can't be parsed
+    return true;
   }) || [];
 
   const handleCheckIn = () => {
     if (!selectedRoom) return showNotification("Please assign a physical room first.", "error");
     checkInCustomer(customer._id || customer.id, selectedRoom);
-    // Locally update status so buttons shift immediately
     setCustomer(prev => ({ ...prev, status: 'CheckedIn', roomNumber: selectedRoom }));
   };
 
@@ -83,7 +84,6 @@ const CustomerProfile = () => {
       const res = await axios.patch(`/api/bookings/${customer._id || customer.id}`, {
         amountPaid: amountPaid
       });
-      
       setCustomer(res.data);
       showNotification(`Payment saved. Balance left: ₹${(totalBill - amountPaid).toFixed(2)}`, 'success');
     } catch (err) {
@@ -104,11 +104,9 @@ const CustomerProfile = () => {
       const res = await axios.post(`/api/bookings/${customer._id || customer.id}/upload-id`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
       setCustomer(res.data.booking); 
       setIdFile(null); 
       showNotification("ID Document uploaded successfully!", "success");
-      
       document.getElementById('idUploadInput').value = '';
     } catch (err) {
       console.error(err);
@@ -121,159 +119,180 @@ const CustomerProfile = () => {
   const documentUrl = customer.idDocumentPath ? `http://localhost:5000${customer.idDocumentPath}` : null;
 
   return (
-    <div className="max-w-5xl mx-auto pb-10 mt-6">
-      <div className="flex justify-between items-center mb-6">
-        <button onClick={() => navigate(-1)} className="text-gray-600 hover:text-amber-600 font-bold transition-colors">
-          <i className="fas fa-arrow-left mr-2"></i> Back to List
+    <div className="max-w-6xl mx-auto pb-20 animate-fadeIn">
+      {/* Header Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+        <button onClick={() => navigate(-1)} className="btn btn-outline h-12 px-6 group">
+          <i className="fas fa-arrow-left mr-2 transition-transform group-hover:-translate-x-1"></i> 
+          Return to Registry
         </button>
-        <div className="space-x-3">
+        
+        <div className="flex flex-wrap gap-4">
           {(!isCheckedIn && !isCheckedOut) && (
-            <button onClick={handleCheckIn} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow-md transition-all active:scale-95">
-              <i className="fas fa-sign-in-alt mr-2"></i> Confirm Check-In
+            <button onClick={handleCheckIn} className="btn btn-primary h-12 px-8 shadow-md">
+              <i className="fas fa-key mr-2 text-xs"></i> Confirm Residency
             </button>
           )}
           {isCheckedIn && (
-            <button onClick={handleCheckOut} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-bold shadow-md transition-all active:scale-95">
-              <i className="fas fa-sign-out-alt mr-2"></i> Process Check-Out
+            <button onClick={handleCheckOut} className="btn bg-red-600 text-white hover:bg-red-700 h-12 px-8 shadow-md">
+              <i className="fas fa-sign-out-alt mr-2 text-xs"></i> Finalize Departure
             </button>
           )}
+          <span className={`h-12 px-6 rounded-xl flex items-center text-xs font-black uppercase tracking-widest border-2 shadow-inner ${
+            isCheckedIn ? 'bg-[#ecfdf5] text-haveli-primary border-haveli-primary/20' : 
+            isCheckedOut ? 'bg-haveli-section text-haveli-muted border-haveli-border' : 
+            'bg-[#fffbeb] text-haveli-accent border-haveli-accent/20'
+          }`}>
+            Status: {customer.status || 'Booked'}
+          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         
         {/* Profile Card */}
-        <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-2">
-          <div className="flex justify-between items-start border-b pb-4 mb-4">
+        <div className="lux-card lg:col-span-2 relative overflow-hidden bg-white">
+          <div className="absolute top-0 left-0 w-1 h-full bg-haveli-accent"></div>
+          
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-haveli-border pb-8 mb-8 gap-4">
             <div>
-              <h2 className="text-3xl font-bold text-gray-800">{customer.guestName}</h2>
-              <p className="text-gray-500 text-sm font-mono mt-1">ID: {customer._id || customer.id}</p>
+              <p className="text-haveli-accent uppercase tracking-[0.3em] font-bold text-[10px] mb-1">Resident Particulars</p>
+              <h2 className="text-4xl font-bold font-display text-haveli-heading uppercase tracking-tight">{customer.guestName}</h2>
+              <p className="text-haveli-muted text-[10px] font-mono mt-1 opacity-60">Folio REF: {customer._id || customer.id}</p>
             </div>
-            <span className={`px-4 py-1 rounded-full text-sm font-bold uppercase shadow-sm border ${
-              isCheckedIn ? 'bg-green-100 text-green-800 border-green-200' : 
-              isCheckedOut ? 'bg-gray-100 text-gray-600 border-gray-200' : 
-              'bg-blue-100 text-blue-800 border-blue-200'
-            }`}>
-              {customer.status || 'Booked'}
-            </span>
+            {customer.isRepeatCustomer && (
+                <div className="bg-haveli-deep text-haveli-accent border border-haveli-accent/30 px-4 py-1.5 rounded-full flex items-center shadow-sm">
+                    <i className="fas fa-award mr-2 text-xs"></i>
+                    <span className="text-[10px] font-black uppercase tracking-widest">Heritage Member</span>
+                </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-6">
-            <div className="bg-gray-50 p-3 rounded border border-gray-100">
-              <p className="text-xs text-gray-500 font-bold uppercase mb-1">Phone</p>
-              <p className="font-medium text-gray-800">{customer.phone || 'N/A'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded border border-gray-100">
-              <p className="text-xs text-gray-500 font-bold uppercase mb-1">Email</p>
-              <p className="font-medium text-gray-800 truncate">{customer.email || 'N/A'}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded border border-gray-100">
-              <p className="text-xs text-gray-500 font-bold uppercase mb-1">Check-In Date</p>
-              <p className="font-medium text-gray-800">{new Date(customer.checkInDate).toLocaleDateString()}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded border border-gray-100">
-              <p className="text-xs text-gray-500 font-bold uppercase mb-1">Check-Out Date</p>
-              <p className="font-medium text-gray-800">{new Date(customer.checkOutDate).toLocaleDateString()}</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded border border-gray-100 col-span-2 flex justify-between items-center">
-              <div>
-                <p className="text-xs text-gray-500 font-bold uppercase mb-1">Current Room</p>
-                <p className={`font-bold ${customer.roomNumber?.includes('Online') ? 'text-amber-600' : 'text-gray-800'}`}>
-                  {customer.roomNumber || 'Unassigned'}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+            <InfoBox label="Contact Phone" value={customer.phone} icon="fa-phone" />
+            <InfoBox label="Electronic Mail" value={customer.email} icon="fa-envelope" />
+            <InfoBox label="Arrival Schedule" value={new Date(customer.checkInDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} icon="fa-calendar-check" />
+            <InfoBox label="Departure Schedule" value={new Date(customer.checkOutDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} icon="fa-calendar-times" />
+          </div>
+
+          <div className="bg-haveli-section p-6 rounded-xl border border-haveli-border mb-10 flex justify-between items-center shadow-inner">
+             <div>
+                <p className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-1">Current Allocation</p>
+                <p className={`text-2xl font-bold font-display ${customer.roomNumber?.includes('Online') ? 'text-haveli-accent' : 'text-haveli-heading'}`}>
+                  {customer.roomNumber || 'Awaiting Selection'}
                 </p>
-              </div>
-            </div>
+             </div>
+             <i className="fas fa-door-open text-haveli-accent/20 text-4xl"></i>
           </div>
 
           {/* Room Assignment for Online Bookings */}
           {(!isCheckedIn && !isCheckedOut) && (
-            <div className="bg-amber-50 p-5 rounded-lg border border-amber-200 shadow-sm">
-              <label className="block text-sm font-bold text-amber-900 mb-2">
-                Assign Physical Room ({expectedType ? expectedType.toUpperCase() : 'Any'}) Before Check-In
+            <div className="bg-[#fffbeb] p-8 rounded-xl border border-haveli-accent/20">
+              <label className="block text-xs font-bold text-haveli-accent uppercase tracking-widest mb-4 flex items-center">
+                <i className="fas fa-concierge-bell mr-2"></i>
+                Allocate Heritage Suite ({expectedType ? expectedType.toUpperCase() : 'General'})
               </label>
-              <div className="flex gap-3">
+              <div className="relative">
                 <select 
                   value={selectedRoom} 
                   onChange={(e) => setSelectedRoom(e.target.value)}
-                  className="w-full px-4 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  className="w-full h-12 px-6 bg-white border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary outline-none transition-all font-bold text-haveli-heading appearance-none"
                 >
-                  <option value="" disabled>Select Room...</option>
+                  <option value="" disabled>Browse Available Inventory...</option>
                   {filteredRooms.length > 0 ? (
                     filteredRooms.map(r => (
-                      <option key={r.roomNumber} value={r.roomNumber}>Room {r.roomNumber} ({r.type})</option>
+                      <option key={r.roomNumber} value={r.roomNumber}>Suite {r.roomNumber} — {r.type}</option>
                     ))
                   ) : (
-                    <option value="" disabled>No {expectedType || ''} rooms currently available</option>
+                    <option value="" disabled>No vacant {expectedType || ''} suites available</option>
                   )}
                 </select>
+                <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs"></i>
               </div>
             </div>
           )}
         </div>
 
         {/* Financials & ID Upload Card */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold border-b pb-2 mb-4 text-gray-800">Financials</h3>
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm"><span className="text-gray-600 font-medium">Room Total:</span> <span className="font-bold">₹{(customer.totalAmount || 0).toLocaleString()}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-600 font-medium">Food Total:</span> <span className="font-bold">₹{(customer.foodCharges || 0).toLocaleString()}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-600 font-medium">GST (18%):</span> <span className="font-bold">₹{gst.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
-              <div className="flex justify-between text-lg font-black border-t pt-3 mt-1"><span className="text-gray-800">Total Bill:</span> <span className="text-amber-700">₹{totalBill.toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>
+        <div className="space-y-8">
+          {/* Billing Card */}
+          <div className="lux-card bg-white border-haveli-border relative overflow-hidden">
+            <h3 className="text-sm font-bold border-b border-haveli-border pb-4 mb-6 text-haveli-heading uppercase tracking-widest font-display flex items-center">
+                <i className="fas fa-file-invoice-dollar mr-2 text-haveli-accent"></i>
+                Folio Billing
+            </h3>
+            <div className="space-y-4 mb-8">
+              <BillRow label="Suite Total" value={customer.totalAmount} />
+              <BillRow label="Culinary Charges" value={customer.foodCharges} />
+              <BillRow label="Heritage Tax (18%)" value={gst} isGst />
+              <div className="flex justify-between items-center pt-5 border-t border-haveli-border mt-4">
+                <span className="text-[10px] font-black text-haveli-heading uppercase tracking-widest">Grand Total</span>
+                <span className="text-2xl font-bold font-display text-haveli-primary">₹{totalBill.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              </div>
             </div>
 
-            <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
-              <label className="text-xs font-bold text-gray-600 uppercase mb-2 block">Payment Received (₹)</label>
-              <div className="flex shadow-sm rounded-md">
+            <div className="bg-haveli-section p-6 rounded-xl border border-haveli-border shadow-sm">
+              <label className="text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-3 block">Payment Recorded (₹)</label>
+              <div className="flex mb-4 group">
                 <input 
                   type="number" 
                   value={amountPaid} 
                   onChange={(e) => setAmountPaid(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                  className="w-full h-12 px-4 bg-white border border-haveli-border rounded-l-xl focus:outline-none focus:ring-1 focus:ring-haveli-primary font-bold text-haveli-heading"
                 />
-                <button onClick={handlePaymentUpdate} className="bg-green-600 text-white px-4 font-bold rounded-r-md hover:bg-green-700 transition-colors">Save</button>
+                <button onClick={handlePaymentUpdate} className="bg-haveli-primary text-white px-6 font-bold rounded-r-xl hover:bg-haveli-primaryHover transition-all flex items-center">
+                    <i className="fas fa-save"></i>
+                </button>
               </div>
-              <div className="flex justify-between mt-3 font-bold text-sm bg-white p-2 rounded border border-red-100">
-                <span className="text-red-600">Balance Left:</span>
-                <span className="text-red-600 text-base">₹{balanceLeft > 0 ? balanceLeft.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</span>
+              <div className="flex justify-between items-center bg-white px-4 py-3 rounded-lg border border-red-100">
+                <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">Outstanding Folio</span>
+                <span className="text-lg font-bold font-display text-red-700 tracking-tight">
+                    ₹{balanceLeft > 0 ? balanceLeft.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold border-b pb-2 mb-4 text-gray-800">Guest ID / Aadhaar</h3>
+          {/* ID Registry Card */}
+          <div className="lux-card bg-white border-haveli-border">
+            <h3 className="text-sm font-bold border-b border-haveli-border pb-4 mb-6 text-haveli-heading uppercase tracking-widest font-display flex items-center">
+                <i className="fas fa-id-card mr-2 text-haveli-accent"></i>
+                Guest Registry ID
+            </h3>
             
             {customer.idDocumentPath && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
-                <div>
-                  <i className="fas fa-check-circle text-green-500 mr-2"></i>
-                  <span className="text-sm font-bold text-green-800">ID Uploaded</span>
+              <div className="mb-6 p-4 bg-[#ecfdf5] border border-haveli-primary/20 rounded-xl flex items-center justify-between shadow-sm">
+                <div className="flex items-center">
+                  <i className="fas fa-check-circle text-haveli-primary text-lg mr-3"></i>
+                  <span className="text-[10px] font-bold text-haveli-primary uppercase tracking-widest">Document Secured</span>
                 </div>
                 <a 
                   href={documentUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded font-bold shadow-sm"
+                  className="btn btn-secondary py-1.5 px-4 text-[10px]"
                 >
-                  View ID
+                  View Folio ID
                 </a>
               </div>
             )}
 
-            <form onSubmit={handleFileUpload}>
-              <input 
-                id="idUploadInput"
-                type="file" 
-                accept=".pdf, image/*"
-                onChange={(e) => setIdFile(e.target.files[0])}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 mb-4 focus:outline-none"
-              />
+            <form onSubmit={handleFileUpload} className="space-y-4">
+              <div className="relative group">
+                <input 
+                  id="idUploadInput"
+                  type="file" 
+                  accept=".pdf, image/*"
+                  onChange={(e) => setIdFile(e.target.files[0])}
+                  className="w-full text-[10px] text-haveli-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-haveli-deep file:text-haveli-accent hover:file:bg-haveli-primary hover:file:text-white cursor-pointer transition-all"
+                />
+              </div>
               <button 
                 type="submit" 
                 disabled={isUploading}
-                className={`w-full py-2.5 rounded-lg font-bold transition-all shadow-sm flex justify-center items-center ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-800 hover:bg-gray-900 text-white'}`}
+                className={`btn btn-block h-12 shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : 'btn-secondary'}`}
               >
-                {isUploading ? <><i className="fas fa-spinner fa-spin mr-2"></i> Uploading...</> : 'Upload Document'}
+                {isUploading ? <><i className="fas fa-spinner fa-spin mr-2"></i> Security Scaning...</> : 'Archive Identity'}
               </button>
             </form>
           </div>
@@ -283,5 +302,25 @@ const CustomerProfile = () => {
     </div>
   );
 };
+
+// Helper Components for Cleaner Render
+const InfoBox = ({ label, value, icon }) => (
+    <div className="bg-haveli-section p-4 rounded-xl border border-haveli-border hover:border-haveli-accent/30 transition-colors">
+      <div className="flex items-center mb-2">
+        <i className={`fas ${icon} text-haveli-accent text-[10px] mr-2 opacity-70`}></i>
+        <p className="text-[10px] text-haveli-muted font-bold uppercase tracking-widest">{label}</p>
+      </div>
+      <p className="font-medium text-haveli-heading truncate">{value || 'Not Recorded'}</p>
+    </div>
+);
+
+const BillRow = ({ label, value, isGst = false }) => (
+    <div className={`flex justify-between items-center ${isGst ? 'text-haveli-accent italic' : 'text-haveli-body'}`}>
+      <span className="text-xs font-light tracking-wide">{label}:</span>
+      <span className={`text-sm font-bold ${isGst ? '' : 'text-haveli-heading'}`}>
+        ₹{value?.toLocaleString(undefined, {minimumFractionDigits: isGst ? 2 : 0})}
+      </span>
+    </div>
+);
 
 export default CustomerProfile;

@@ -18,10 +18,8 @@ const Header = () => {
   const closeMenu = () => setIsMenuOpen(false);
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 bg-haveli-card border-b border-haveli-border z-50 transition-all duration-500 gold-shimmer ${isScrolled ? 'active shadow-md py-2 backdrop-blur-md' : 'py-4'
-        }`}
-    >      <nav className="container mx-auto px-6 flex items-center justify-between">
+    <header className="fixed top-0 left-0 right-0 bg-haveli-card border-b border-haveli-border z-50 transition-all duration-500 gold-shimmer shadow-sm py-3 backdrop-blur-md">
+      <nav className="container mx-auto px-6 flex items-center justify-between">
 
         {/* --- LUXURY LOGO SECTION --- */}
         <Link to="/" className="flex items-center group relative" onClick={closeMenu}>

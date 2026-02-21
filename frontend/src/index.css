@@ -135,7 +135,7 @@ header.scrolled{
 .btn-block{
   width:100%;
 }
-/* ===== GOLD SHIMMER EFFECT ===== */
+/* ===== GOLD SHIMMER — AUTOMATIC EVERY 6s ===== */
 
 .gold-shimmer {
   position: relative;
@@ -147,29 +147,28 @@ header.scrolled{
   position: absolute;
   top: 0;
   left: -120%;
-  width: 60%;
+  width: 50%;
   height: 100%;
+
   background: linear-gradient(
     120deg,
     transparent 0%,
-    rgba(212,175,55,0.08) 20%,
-    rgba(255,215,120,0.35) 40%,
-    rgba(212,175,55,0.08) 60%,
+    rgba(212,175,55,0.05) 30%,
+    rgba(255,224,130,0.45) 50%,
+    rgba(212,175,55,0.05) 70%,
     transparent 100%
   );
+
   filter: blur(6px);
+  pointer-events: none;
+
+  animation: shimmerAuto 6s linear infinite;
 }
 
-.gold-shimmer.active::after {
-  animation: shimmerMove 2.8s ease-in-out infinite;
-}
-
-@keyframes shimmerMove {
-  0% { left: -120%; }
-  100% { left: 130%; }
-}
-/* Prevent any hide-on-scroll behavior */
-header {
-  transform: translateY(0) !important;
-  top: 0 !important;
+@keyframes shimmerAuto {
+  0%   { left: -120%; opacity:0; }
+  10%  { opacity:1; }
+  40%  { left: 130%; opacity:1; }
+  45%  { opacity:0; }
+  100% { left: 130%; opacity:0; }
 }

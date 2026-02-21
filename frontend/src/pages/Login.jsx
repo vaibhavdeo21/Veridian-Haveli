@@ -1,8 +1,10 @@
+import usePageTitle from "../hooks/usePageTitle";
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const Login = () => {
+  usePageTitle("Login | VERIDIAN HAVELI");
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const { login, user } = useAuth(); // Extracted 'user' state
   const navigate = useNavigate(); // Hook for redirection
