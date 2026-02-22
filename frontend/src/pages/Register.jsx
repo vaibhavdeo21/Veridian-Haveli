@@ -111,6 +111,7 @@ const Register = () => {
         <div className="mt-6">
           <div className="flex items-center w-full mb-6">
             <hr className="flex-grow border-haveli-border" />
+            <span className="px-4 text-haveli-muted text-xs uppercase tracking-widest font-bold">Or</span>
             <hr className="flex-grow border-haveli-border" />
           </div>
           
