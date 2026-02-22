@@ -476,6 +476,7 @@ const StayCard = ({ booking, financials, type, onCancel }) => {
           <span className="font-display text-2xl tracking-tighter">₹{Math.max(0, balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
         </div>
 
+        {/* --- NEW: Cancellation Button for Future Reservations --- */}
         {type === 'upcoming' && (
           <button 
             onClick={onCancel}
