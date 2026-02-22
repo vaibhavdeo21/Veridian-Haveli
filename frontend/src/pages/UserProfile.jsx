@@ -462,6 +462,7 @@ const StayCard = ({ booking, financials, type, onCancel }) => {
 
         <div className="border-t border-haveli-border pt-6 mb-6 space-y-3">
           <div className="flex justify-between items-center font-bold text-haveli-heading">
+            <span className="text-[10px] uppercase tracking-widest opacity-60">Total Bill</span>
             <span className="font-display font-bold text-xl">₹{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <div className="flex justify-between items-center font-medium text-xs text-haveli-primary italic">
