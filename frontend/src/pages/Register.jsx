@@ -65,6 +65,7 @@ const Register = () => {
               <input 
                 type="text" 
                 className="w-full h-12 pl-12 pr-4 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-body font-light transition-all"
+                placeholder="Choose a username"
                 value={details.username}
                 onChange={(e) => setDetails({...details, username: e.target.value})}
                 required
