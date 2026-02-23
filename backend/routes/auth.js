@@ -4,9 +4,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/authMiddleware');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// @route   POST api/auth/register
-// @desc    Register a standard user (Role defaults to 'user')
+
 router.post('/register', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -30,8 +31,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// @route   POST api/auth/login
-// @desc    Authenticate user & get token
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -45,7 +44,6 @@ router.post('/login', async (req, res) => {
 
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5d' }, (err, token) => {
       if (err) throw err;
-      // Send the role back so the frontend can restrict access
       res.json({ 
         token, 
         user: { id: user.id, username: user.username, role: user.role } 
@@ -56,23 +54,19 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// @route   PUT api/auth/change-password
-// @desc    Change password securely by verifying the current password
+
 router.put('/change-password', auth, async (req, res) => {
-  // NEW: Require both current and new passwords from the frontend
   const { currentPassword, newPassword } = req.body;
   
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
 
-    // NEW: Verify the current password matches what is in the database
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ msg: 'Incorrect current password' });
     }
 
-    // Hash and save the new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
     
@@ -83,13 +77,65 @@ router.put('/change-password', auth, async (req, res) => {
   }
 });
 
-// @route   GET api/auth/user
 router.get('/user', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     res.json(user);
   } catch (err) {
     res.status(500).send('Server Error');
+  }
+});
+
+router.post('/google', async (req, res) => {
+  const { credential } = req.body;
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+
+      const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      user = new User({
+        username: name,
+        email: email,
+        password: hashedPassword,
+        role: 'user' 
+      });
+
+      await user.save();
+    }
+
+    const payloadJwt = {
+      user: {
+        id: user.id,
+        role: user.role
+      }
+    };
+
+    jwt.sign(
+      payloadJwt,
+      process.env.JWT_SECRET,
+      { expiresIn: '5h' },
+      (err, token) => {
+        if (err) throw err;
+        res.json({ token, user: { _id: user.id, username: user.username, email: user.email, role: user.role } });
+      }
+    );
+
+  } catch (err) {
+    console.error("Google Auth Error:", err);
+    res.status(401).json({ msg: 'Google Authentication failed' });
   }
 });
 
