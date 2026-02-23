@@ -24,6 +24,25 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
+    // --- FIXED NAMING AND ROUTE ---
+    const updateUsername = async (newUsername) => {
+        try {
+            const res = await axios.put('/api/auth/update-username', { username: newUsername });
+
+            // Update the local state while preserving other data (like hasActiveStay)
+            const updatedUser = { ...user, username: res.data.username };
+
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+
+            showNotification('Identity updated successfully', 'success');
+            return true;
+        } catch (err) {
+            showNotification(err.response?.data?.msg || 'Update failed', 'error');
+            return false;
+        }
+    };
+
     const login = async (credentials) => {
         try {
             const res = await axios.post('/api/auth/login', credentials);
@@ -42,7 +61,7 @@ export const AuthProvider = ({ children }) => {
                 try {
                     // Fetch all bookings to find matches for the logging-in user
                     const bookingRes = await axios.get('/api/bookings');
-                    
+
                     // Find any booking for this user that is 'Confirmed' or 'Checked-in'
                     // We normalize the status string to handle potential spacing/casing issues
                     const activeBooking = bookingRes.data.find(b => {
@@ -54,17 +73,17 @@ export const AuthProvider = ({ children }) => {
 
                     if (activeBooking) {
                         // Re-inject the necessary flags for the Order page check
-                        userData = { 
-                            ...userData, 
-                            activeBooking: activeBooking, 
-                            hasActiveStay: true 
+                        userData = {
+                            ...userData,
+                            activeBooking: activeBooking,
+                            hasActiveStay: true
                         };
                     } else {
                         // Ensure old flags are cleared if no active stay exists
-                        userData = { 
-                            ...userData, 
-                            activeBooking: null, 
-                            hasActiveStay: false 
+                        userData = {
+                            ...userData,
+                            activeBooking: null,
+                            hasActiveStay: false
                         };
                     }
                 } catch (bookingErr) {
@@ -74,9 +93,9 @@ export const AuthProvider = ({ children }) => {
                 // Finalize the user state and storage
                 localStorage.setItem('user', JSON.stringify(userData));
                 setUser(userData);
-                
+
                 showNotification('Welcome back to Veridian Haveli', 'success');
-                
+
                 // Navigate based on role
                 navigate(userData.role === 'admin' ? '/admin' : '/');
             }
@@ -100,7 +119,7 @@ export const AuthProvider = ({ children }) => {
                 // Synchronize active bookings (identical to standard login)
                 try {
                     const bookingRes = await axios.get('/api/bookings');
-                    
+
                     const activeBooking = bookingRes.data.find(b => {
                         const isOwner = (b.userId === userData._id || b.email === userData.email);
                         const statusNormalized = (b.status || '').replace(/\s/g, "").toLowerCase();
@@ -109,16 +128,16 @@ export const AuthProvider = ({ children }) => {
                     });
 
                     if (activeBooking) {
-                        userData = { 
-                            ...userData, 
-                            activeBooking: activeBooking, 
-                            hasActiveStay: true 
+                        userData = {
+                            ...userData,
+                            activeBooking: activeBooking,
+                            hasActiveStay: true
                         };
                     } else {
-                        userData = { 
-                            ...userData, 
-                            activeBooking: null, 
-                            hasActiveStay: false 
+                        userData = {
+                            ...userData,
+                            activeBooking: null,
+                            hasActiveStay: false
                         };
                     }
                 } catch (bookingErr) {
@@ -128,9 +147,9 @@ export const AuthProvider = ({ children }) => {
                 // Finalize the user state and storage
                 localStorage.setItem('user', JSON.stringify(userData));
                 setUser(userData);
-                
+
                 showNotification('Google Authentication Successful', 'success');
-                
+
                 // Navigate based on role
                 navigate(userData.role === 'admin' ? '/admin' : '/');
             }
@@ -149,6 +168,7 @@ export const AuthProvider = ({ children }) => {
             }
         } catch (err) {
             showNotification(err.response?.data?.msg || 'Registration Failed', 'error');
+            throw err;
         }
     };
 
@@ -181,8 +201,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        // ADDED googleLogin to the Provider value so it can be accessed in Login/Register components
-        <AuthContext.Provider value={{ user, login, googleLogin, register, logout, updateActiveBooking, updateUserStays }}>
+        // FIXED: Exported updateUsername instead of updateProfile
+        <AuthContext.Provider value={{ user, login, googleLogin, register, logout, updateUsername, updateActiveBooking, updateUserStays }}>
             {children}
         </AuthContext.Provider>
     );

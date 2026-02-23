@@ -153,7 +153,8 @@ router.post('/google', async (req, res) => {
   }
 });
 
-router.put('/update-profile', auth, async (req, res) => {
+// --- FIXED ROUTE NAME: Was '/update-profile', now '/update-username' ---
+router.put('/update-username', auth, async (req, res) => {
   const { username } = req.body;
 
   try {

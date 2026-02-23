@@ -1,5 +1,5 @@
 import usePageTitle from "../hooks/usePageTitle";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useData } from '../context/DataContext.jsx';
@@ -7,16 +7,41 @@ import ChangePasswordModal from '../components/ChangePasswordModal.jsx';
 
 const UserProfile = () => {
   usePageTitle("My Stay | VERIDIAN HAVELI");
-  const { user } = useAuth();
+  // Ensure you pull updateUsername from context
+  const { user, updateUsername } = useAuth(); 
   const { customers } = useData();
 
   const [activeTab, setActiveTab] = useState('stays');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  
+  // --- NEW: Edit Username State ---
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState(user?.username || '');
+
+  // Keep the input value in sync if the user object changes globally
+  useEffect(() => {
+    if (user) setEditNameValue(user.username);
+  }, [user]);
 
   // If not logged in, redirect to login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+
+  // --- IDENTITY UPDATE HANDLER ---
+  const handleNameUpdate = async () => {
+    if (!editNameValue.trim() || editNameValue === user.username) {
+      setIsEditingName(false);
+      setEditNameValue(user.username);
+      return;
+    }
+    
+    // updateUsername must return true if successful (from AuthContext)
+    const success = await updateUsername(editNameValue);
+    if (success) {
+      setIsEditingName(false);
+    }
+  };
 
   // --- 1. FILTER & CATEGORIZE BOOKINGS ---
   const { currentStays, upcomingStays, pastStays } = useMemo(() => {
@@ -193,14 +218,48 @@ const UserProfile = () => {
             </h2>
 
             <div className="space-y-12">
+              
+              {/* --- ENHANCED IDENTITY SECTION --- */}
               <div>
-                <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-3">Primary Membership Identity</label>
-                <div className="text-lg font-medium text-haveli-heading bg-haveli-section px-8 py-5 rounded-2xl border border-haveli-border shadow-inner flex items-center">
+                <div className="flex justify-between items-end mb-3">
+                  <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest">Primary Membership Identity</label>
+                  {!isEditingName ? (
+                    <button onClick={() => setIsEditingName(true)} className="text-[10px] font-black text-haveli-accent uppercase tracking-widest hover:underline transition-all">
+                      <i className="fas fa-pen mr-1"></i> Edit
+                    </button>
+                  ) : (
+                    <div className="flex space-x-3">
+                      <button onClick={handleNameUpdate} className="text-[10px] font-black text-haveli-primary uppercase tracking-widest hover:underline transition-all">
+                        Save
+                      </button>
+                      <button 
+                        onClick={() => { setIsEditingName(false); setEditNameValue(user.username); }} 
+                        className="text-[10px] font-black text-haveli-muted uppercase tracking-widest hover:underline transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                <div className={`text-lg font-medium text-haveli-heading bg-haveli-section px-8 py-5 rounded-2xl border border-haveli-border shadow-inner flex items-center transition-all ${isEditingName ? 'ring-1 ring-haveli-accent border-haveli-accent' : ''}`}>
                   <i className="fas fa-at mr-4 text-haveli-accent opacity-50"></i>
-                  {user.username}
+                  {!isEditingName ? (
+                    <span>{user.username}</span>
+                  ) : (
+                    <input
+                      type="text"
+                      value={editNameValue}
+                      onChange={(e) => setEditNameValue(e.target.value)}
+                      className="bg-transparent border-b border-haveli-primary focus:border-haveli-accent focus:outline-none w-full text-haveli-heading font-display transition-colors"
+                      autoFocus
+                      onKeyDown={(e) => e.key === 'Enter' && handleNameUpdate()}
+                    />
+                  )}
                 </div>
               </div>
 
+              {/* --- CREDENTIALS MANAGEMENT --- */}
               <div>
                 <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-4">Credentials Management</label>
                 <button
@@ -211,6 +270,7 @@ const UserProfile = () => {
                 </button>
                 <p className="text-xs text-haveli-muted mt-6 font-light leading-relaxed">Veridian Haveli recommends bi-monthly credential rotation to maintain the highest standard of folio security.</p>
               </div>
+
             </div>
           </div>
         )}
