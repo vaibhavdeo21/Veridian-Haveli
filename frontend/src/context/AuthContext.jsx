@@ -28,18 +28,57 @@ export const AuthProvider = ({ children }) => {
         try {
             const res = await axios.post('/api/auth/login', credentials);
             if (res.data && res.data.token) {
-                const userData = res.data.user;
+                let userData = res.data.user;
+                const token = res.data.token;
 
-                // DEBUG: Check if email exists here!
-                console.log("User Data from Server:", userData);
+                // Set token immediately for the subsequent booking check
+                localStorage.setItem('token', token);
+                axios.defaults.headers.common['x-auth-token'] = token;
 
-                localStorage.setItem('token', res.data.token);
+                /* SYNC FIX: Fetch the user's latest booking status from the database.
+                   This prevents the "You must have an active reservation" error 
+                   when logging back in.
+                */
+                try {
+                    // Fetch all bookings to find matches for the logging-in user
+                    const bookingRes = await axios.get('/api/bookings');
+                    
+                    // Find any booking for this user that is 'Confirmed' or 'Checked-in'
+                    // We normalize the status string to handle potential spacing/casing issues
+                    const activeBooking = bookingRes.data.find(b => {
+                        const isOwner = (b.userId === userData._id || b.email === userData.email);
+                        const statusNormalized = (b.status || '').replace(/\s/g, "").toLowerCase();
+                        const isActive = statusNormalized === 'confirmed' || statusNormalized === 'checkedin';
+                        return isOwner && isActive;
+                    });
+
+                    if (activeBooking) {
+                        // Re-inject the necessary flags for the Order page check
+                        userData = { 
+                            ...userData, 
+                            activeBooking: activeBooking, 
+                            hasActiveStay: true 
+                        };
+                    } else {
+                        // Ensure old flags are cleared if no active stay exists
+                        userData = { 
+                            ...userData, 
+                            activeBooking: null, 
+                            hasActiveStay: false 
+                        };
+                    }
+                } catch (bookingErr) {
+                    console.error("Could not sync active booking on login:", bookingErr);
+                }
+
+                // Finalize the user state and storage
                 localStorage.setItem('user', JSON.stringify(userData));
-                axios.defaults.headers.common['x-auth-token'] = res.data.token;
-
                 setUser(userData);
-                showNotification('Login Successful', 'success');
-                navigate('/');
+                
+                showNotification('Welcome back to Veridian Haveli', 'success');
+                
+                // Navigate based on role
+                navigate(userData.role === 'admin' ? '/admin' : '/');
             }
         } catch (err) {
             showNotification(err.response?.data?.msg || 'Login Failed', 'error');
