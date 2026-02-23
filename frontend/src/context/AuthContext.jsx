@@ -85,6 +85,60 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // --- NEW: GOOGLE LOGIN / REGISTRATION HANDLER ---
+    const googleLogin = async (credential) => {
+        try {
+            const res = await axios.post('/api/auth/google', { credential });
+            if (res.data && res.data.token) {
+                let userData = res.data.user;
+                const token = res.data.token;
+
+                // Set token immediately for the subsequent booking check
+                localStorage.setItem('token', token);
+                axios.defaults.headers.common['x-auth-token'] = token;
+
+                // Synchronize active bookings (identical to standard login)
+                try {
+                    const bookingRes = await axios.get('/api/bookings');
+                    
+                    const activeBooking = bookingRes.data.find(b => {
+                        const isOwner = (b.userId === userData._id || b.email === userData.email);
+                        const statusNormalized = (b.status || '').replace(/\s/g, "").toLowerCase();
+                        const isActive = statusNormalized === 'confirmed' || statusNormalized === 'checkedin';
+                        return isOwner && isActive;
+                    });
+
+                    if (activeBooking) {
+                        userData = { 
+                            ...userData, 
+                            activeBooking: activeBooking, 
+                            hasActiveStay: true 
+                        };
+                    } else {
+                        userData = { 
+                            ...userData, 
+                            activeBooking: null, 
+                            hasActiveStay: false 
+                        };
+                    }
+                } catch (bookingErr) {
+                    console.error("Could not sync active booking on Google login:", bookingErr);
+                }
+
+                // Finalize the user state and storage
+                localStorage.setItem('user', JSON.stringify(userData));
+                setUser(userData);
+                
+                showNotification('Google Authentication Successful', 'success');
+                
+                // Navigate based on role
+                navigate(userData.role === 'admin' ? '/admin' : '/');
+            }
+        } catch (err) {
+            showNotification(err.response?.data?.msg || 'Google Login Failed', 'error');
+        }
+    };
+
     const register = async (userData) => {
         try {
             const res = await axios.post('/api/auth/register', userData);
@@ -127,7 +181,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, updateActiveBooking, updateUserStays }}>
+        // ADDED googleLogin to the Provider value so it can be accessed in Login/Register components
+        <AuthContext.Provider value={{ user, login, googleLogin, register, logout, updateActiveBooking, updateUserStays }}>
             {children}
         </AuthContext.Provider>
     );
