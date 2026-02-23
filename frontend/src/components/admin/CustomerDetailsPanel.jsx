@@ -269,9 +269,11 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
+  // --- UPDATED STATUS LOGIC TO INCLUDE EXPIRED ---
   const normalizedStatus = (customer.status || "").replace(/\s/g, "").toLowerCase();
   const isCheckedIn = normalizedStatus === 'checkedin';
   const isCheckedOut = normalizedStatus === 'checkedout';
+  const isExpired = normalizedStatus === 'expired' || normalizedStatus === 'noshow'; // Catch both variations
   const isOnlinePlaceholder = customer.roomNumber?.toLowerCase().includes('online');
 
   const handleStatusChange = (e) => {
@@ -338,10 +340,13 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
           </select>
         </td>
 
+        {/* --- UPDATED STATUS BADGE CELL --- */}
         <td className="px-6 py-5 whitespace-nowrap text-center">
-          <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${isCheckedIn ? 'bg-[#ecfdf5] text-haveli-primary border-haveli-primary/20' :
+          <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border 
+            ${isCheckedIn ? 'bg-[#ecfdf5] text-haveli-primary border-haveli-primary/20' :
               isCheckedOut ? 'bg-haveli-section text-haveli-muted border-haveli-border' :
-                'bg-[#fffbeb] text-haveli-accent border-haveli-accent/20'
+              isExpired ? 'bg-red-50 text-red-500 border-red-100' :
+              'bg-[#fffbeb] text-haveli-accent border-haveli-accent/20'
             }`}>
             {customer.status || 'Pending'}
           </span>

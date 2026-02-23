@@ -84,7 +84,8 @@ const UserProfile = () => {
       if (normalizedStatus === 'checkedin') {
         current.push(booking);
       }
-      else if (normalizedStatus === 'checkedout' || normalizedStatus === 'cancelled') {
+      // UPDATE: Added 'expired' to the past stays array conditions
+      else if (normalizedStatus === 'checkedout' || normalizedStatus === 'cancelled' || normalizedStatus === 'expired') {
         past.push(booking);
       }
       else if (normalizedStatus === 'booked') {
@@ -365,10 +366,11 @@ const StayCard = ({ booking, financials, type }) => {
     past: 'bg-haveli-section text-haveli-muted border-haveli-border'
   };
 
+  // UPDATE: Dynamically set the past status text based on the database status
   const statusText = {
     current: 'In-Residence',
     upcoming: 'Confirmed Registry',
-    past: 'Stay Concluded'
+    past: booking.status === 'Expired' ? 'Expired / No-Show' : 'Stay Concluded'
   };
 
   return (

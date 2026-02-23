@@ -58,9 +58,11 @@ const CustomerProfile = () => {
   const totalBill = roomTotalIncGST + foodTotal + foodGST; 
   const balanceLeft = totalBill - amountPaid;
 
+  // --- UPDATED STATUS LOGIC TO INCLUDE EXPIRED ---
   const normalizedStatus = (customer.status || "").replace(/\s/g, "").toLowerCase();
   const isCheckedIn = normalizedStatus === 'checkedin';
   const isCheckedOut = normalizedStatus === 'checkedout';
+  const isExpired = normalizedStatus === 'expired' || normalizedStatus === 'noshow';
 
   // --- BULLETPROOF ROOM FILTERING LOGIC ---
   const getExpectedRoomType = (roomString) => {
@@ -144,7 +146,8 @@ const CustomerProfile = () => {
         </button>
         
         <div className="flex flex-wrap gap-4">
-          {(!isCheckedIn && !isCheckedOut) && (
+          {/* Prevent check-in if expired */}
+          {(!isCheckedIn && !isCheckedOut && !isExpired) && (
             <button onClick={handleCheckIn} className="btn btn-primary h-12 px-8 shadow-md">
               <i className="fas fa-key mr-2 text-xs"></i> Confirm Residency
             </button>
@@ -157,6 +160,7 @@ const CustomerProfile = () => {
           <span className={`h-12 px-6 rounded-xl flex items-center text-xs font-black uppercase tracking-widest border-2 shadow-inner ${
             isCheckedIn ? 'bg-[#ecfdf5] text-haveli-primary border-haveli-primary/20' : 
             isCheckedOut ? 'bg-haveli-section text-haveli-muted border-haveli-border' : 
+            isExpired ? 'bg-red-50 text-red-500 border-red-100' :
             'bg-[#fffbeb] text-haveli-accent border-haveli-accent/20'
           }`}>
             Status: {customer.status || 'Booked'}
@@ -201,8 +205,8 @@ const CustomerProfile = () => {
              <i className="fas fa-door-open text-haveli-accent/20 text-4xl"></i>
           </div>
 
-          {/* Room Assignment for Online Bookings */}
-          {(!isCheckedIn && !isCheckedOut) && (
+          {/* Room Assignment for Online Bookings - Hidden if expired */}
+          {(!isCheckedIn && !isCheckedOut && !isExpired) && (
             <div className="bg-[#fffbeb] p-8 rounded-xl border border-haveli-accent/20">
               <label className="block text-xs font-bold text-haveli-accent uppercase tracking-widest mb-4 flex items-center">
                 <i className="fas fa-concierge-bell mr-2"></i>
