@@ -4,17 +4,22 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/authMiddleware');
-const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 
 router.post('/register', async (req, res) => {
-  const { username, password } = req.body;
+  // 1. Extract email from the frontend request
+  const { username, email, password } = req.body; 
+  
   try {
-    let user = await User.findOne({ username });
-    if (user) return res.status(400).json({ msg: 'User already exists' });
+    // 2. Check if a user already exists with that username OR that email
+    let user = await User.findOne({ $or: [{ username }, { email }] });
+    
+    if (user) {
+      // Provide a clearer error message so the user knows why it failed
+      return res.status(400).json({ msg: 'A user with that username or email already exists' });
+    }
 
-    user = new User({ username, password });
+    // 3. Save the email to the new User document
+    user = new User({ username, email, password });
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
@@ -24,10 +29,15 @@ router.post('/register', async (req, res) => {
     const payload = { user: { id: user.id, role: user.role } };
     jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5d' }, (err, token) => {
       if (err) throw err;
-      res.status(201).json({ token, user: { username: user.username, role: user.role } });
+      // 4. Send the email back in the response to match the Google login response
+      res.status(201).json({ 
+        token, 
+        user: { username: user.username, email: user.email, role: user.role } 
+      });
     });
   } catch (err) {
-    res.status(500).send('Server error');
+    console.error(err.message);
+    res.status(500).send('Server error during registration');
   }
 });
 
@@ -86,29 +96,29 @@ router.get('/user', auth, async (req, res) => {
   }
 });
 
+// --- UPDATED GOOGLE ROUTE ---
 router.post('/google', async (req, res) => {
-  const { credential } = req.body;
+  // We now receive the Google User Info directly from the React frontend
+  const { googleProfile } = req.body;
 
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    
-    const payload = ticket.getPayload();
-    const { email, name, picture, sub: googleId } = payload;
+    if (!googleProfile) {
+      return res.status(400).json({ msg: 'Google profile data is required' });
+    }
+
+    const { email, name, sub: googleId } = googleProfile;
 
     let user = await User.findOne({ email });
 
     if (!user) {
-
+      // REGISTRATION: Create new account
       const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(randomPassword, salt);
 
       user = new User({
         username: name,
-        email: email,
+        email: email, // Google accounts will have an email
         password: hashedPassword,
         role: 'user' 
       });
@@ -116,6 +126,7 @@ router.post('/google', async (req, res) => {
       await user.save();
     }
 
+    // LOGIN: Generate JWT
     const payloadJwt = {
       user: {
         id: user.id,
@@ -126,16 +137,19 @@ router.post('/google', async (req, res) => {
     jwt.sign(
       payloadJwt,
       process.env.JWT_SECRET,
-      { expiresIn: '5h' },
+      { expiresIn: '5d' }, // Aligned to 5d to match your other login routes
       (err, token) => {
         if (err) throw err;
-        res.json({ token, user: { _id: user.id, username: user.username, email: user.email, role: user.role } });
+        res.json({ 
+          token, 
+          user: { _id: user.id, username: user.username, email: user.email, role: user.role } 
+        });
       }
     );
 
   } catch (err) {
     console.error("Google Auth Error:", err);
-    res.status(401).json({ msg: 'Google Authentication failed' });
+    res.status(500).json({ msg: 'Google Authentication failed on the server' });
   }
 });
 

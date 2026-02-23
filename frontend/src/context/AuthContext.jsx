@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }) => {
     // --- NEW: GOOGLE LOGIN / REGISTRATION HANDLER ---
     const googleLogin = async (credential) => {
         try {
-            const res = await axios.post('/api/auth/google', { credential });
+            const res = await axios.post('/api/auth/google', { googleProfile: credential });
             if (res.data && res.data.token) {
                 let userData = res.data.user;
                 const token = res.data.token;

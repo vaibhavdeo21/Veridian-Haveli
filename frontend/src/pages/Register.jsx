@@ -2,21 +2,35 @@ import usePageTitle from "../hooks/usePageTitle";
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useGoogleLogin } from '@react-oauth/google'; // Import the hook
-import axios from 'axios'; // Needed to fetch user info from Google
+import { useGoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 
 const Register = () => {
   usePageTitle("Create Account | VERIDIAN HAVELI");
   const [details, setDetails] = useState({ username: '', email: '', password: '' });
-  const { register, googleLogin } = useAuth(); // Extracted googleLogin
+  const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  // --- ENHANCED SUBMIT LOGIC ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    register(details);
+    
+    // Optional: Add a quick local check for password strength
+    if (details.password.length < 6) {
+      alert("For your security, please use a password of at least 6 characters.");
+      return;
+    }
+
+    try {
+      // We await the register function so we can catch any errors
+      await register(details);
+    } catch (error) {
+      // If registration fails (e.g., email taken), clear the password field 
+      // so the user has to re-type it, which is standard security practice.
+      setDetails(prev => ({ ...prev, password: '' }));
+    }
   };
 
-  // --- CUSTOM GOOGLE BUTTON LOGIC ---
   const handleGoogleAuth = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -24,7 +38,6 @@ const Register = () => {
           'https://www.googleapis.com/oauth2/v3/userinfo',
           { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
         );
-        // Pass the fetched Google data to your AuthContext to create account/login
         googleLogin(userInfo.data); 
       } catch (err) {
         console.error("Failed to fetch Google user info", err);
@@ -95,7 +108,6 @@ const Register = () => {
           </button>
         </form>
 
-        {/* --- CUSTOM GOOGLE BUTTON UI --- */}
         <div className="mt-6">
           <div className="flex items-center w-full mb-6">
             <hr className="flex-grow border-haveli-border" />
@@ -104,10 +116,10 @@ const Register = () => {
           </div>
           
           <button 
+            type="button" // Added type="button" to prevent it from accidentally submitting the form
             onClick={() => handleGoogleAuth()}
             className="w-full h-12 bg-white border border-haveli-border rounded-xl flex items-center justify-center gap-3 text-haveli-heading font-medium hover:bg-haveli-section transition-colors shadow-sm"
           >
-            {/* Google G Logo SVG */}
             <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
               <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
                 <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z"/>
@@ -119,7 +131,6 @@ const Register = () => {
             Sign up with Google
           </button>
         </div>
-        {/* --- END CUSTOM BUTTON --- */}
         
         <div className="mt-8 text-center text-sm text-haveli-muted border-t border-haveli-border pt-6 font-light">
           Already have an account? <br/>
