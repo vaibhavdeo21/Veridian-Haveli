@@ -200,9 +200,26 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(updatedUser));
     };
 
+    const updateFullName = async (newFullName) => {
+        try {
+            const res = await axios.put('/api/auth/update-fullname', { fullName: newFullName });
+            const updatedUser = { ...user, fullName: res.data.fullName };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            showNotification('Guest Name updated successfully', 'success');
+            return true;
+        } catch (err) {
+            showNotification('Failed to update name', 'error');
+            return false;
+        }
+    };
+
     return (
         // FIXED: Exported updateUsername instead of updateProfile
-        <AuthContext.Provider value={{ user, login, googleLogin, register, logout, updateUsername, updateActiveBooking, updateUserStays }}>
+        <AuthContext.Provider value={{
+            user, login, googleLogin, register, logout, updateUsername,
+            updateActiveBooking, updateUserStays, updateFullName
+        }}>
             {children}
         </AuthContext.Provider>
     );

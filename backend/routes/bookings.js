@@ -13,6 +13,31 @@ const upload = require('../middleware/uploadMiddleware');
 // @route   GET api/bookings
 router.get('/', async (req, res) => {
   try {
+    // --- NEW AUTO-CLEANUP LOGIC ---
+    // Get today's date and set the time to midnight for accurate comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. AUTO-CHECKOUT: If they were checked in and the checkout date passed
+    await Booking.updateMany(
+      { 
+        status: { $regex: /checked\s*in/i }, 
+        checkOutDate: { $lt: today } 
+      },
+      { $set: { status: 'Checked Out' } }
+    );
+
+    // 2. AUTO-EXPIRE: If they were booked but never arrived and the date passed
+    await Booking.updateMany(
+      { 
+        status: { $regex: /booked/i }, 
+        checkOutDate: { $lt: today } 
+      },
+      { $set: { status: 'Expired' } } 
+    );
+    // ------------------------------
+
+    // 3. Fetch the newly cleaned database records
     const bookings = await Booking.find().sort({ createdAt: -1 });
     res.json(bookings);
   } catch (err) {

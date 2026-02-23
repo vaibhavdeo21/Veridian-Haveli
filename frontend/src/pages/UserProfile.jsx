@@ -7,20 +7,27 @@ import ChangePasswordModal from '../components/ChangePasswordModal.jsx';
 
 const UserProfile = () => {
   usePageTitle("My Stay | VERIDIAN HAVELI");
-  // Ensure you pull updateUsername from context
-  const { user, updateUsername } = useAuth(); 
+  // Added updateFullName to context extraction
+  const { user, updateUsername, updateFullName } = useAuth(); 
   const { customers } = useData();
 
   const [activeTab, setActiveTab] = useState('stays');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   
-  // --- NEW: Edit Username State ---
+  // --- Edit Username State ---
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(user?.username || '');
 
-  // Keep the input value in sync if the user object changes globally
+  // --- NEW: Edit Full Name State ---
+  const [isEditingFullName, setIsEditingFullName] = useState(false);
+  const [editFullNameValue, setEditFullNameValue] = useState(user?.fullName || '');
+
+  // Keep the input values in sync if the user object changes globally
   useEffect(() => {
-    if (user) setEditNameValue(user.username);
+    if (user) {
+      setEditNameValue(user.username);
+      setEditFullNameValue(user.fullName || '');
+    }
   }, [user]);
 
   // If not logged in, redirect to login
@@ -28,7 +35,7 @@ const UserProfile = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // --- IDENTITY UPDATE HANDLER ---
+  // --- IDENTITY UPDATE HANDLERS ---
   const handleNameUpdate = async () => {
     if (!editNameValue.trim() || editNameValue === user.username) {
       setIsEditingName(false);
@@ -36,10 +43,21 @@ const UserProfile = () => {
       return;
     }
     
-    // updateUsername must return true if successful (from AuthContext)
     const success = await updateUsername(editNameValue);
     if (success) {
       setIsEditingName(false);
+    }
+  };
+
+  const handleFullNameUpdate = async () => {
+    if (editFullNameValue === user.fullName) {
+      setIsEditingFullName(false);
+      return;
+    }
+    
+    const success = await updateFullName(editFullNameValue);
+    if (success) {
+      setIsEditingFullName(false);
     }
   };
 
@@ -117,23 +135,34 @@ const UserProfile = () => {
     };
   };
 
+  // Determine what to show in the Welcome Banner
+  const displayName = user.fullName ? user.fullName : user.username;
+
   return (
     <main className="pt-32 pb-16 bg-haveli-bg min-h-screen">
       <div className="max-w-6xl mx-auto px-6">
 
-        {/* Header Section */}
+        {/* --- LUXURIOUS HEADER SECTION --- */}
         <div className="lux-card border-haveli-border p-10 mb-10 relative overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-sm bg-white">
-          <div className="absolute top-0 left-0 w-1 h-full bg-haveli-accent"></div>
+          <div className="absolute top-0 left-0 w-1 h-full bg-[#C2A14D]"></div>
           <div className="flex items-center space-x-8">
-            <div className="w-24 h-24 bg-haveli-section border border-haveli-border rounded-full flex items-center justify-center text-4xl text-haveli-accent shadow-inner relative">
+            <div className="w-24 h-24 bg-haveli-section border border-[#C2A14D]/30 rounded-full flex items-center justify-center text-4xl text-[#C2A14D] shadow-inner relative">
               <i className="fas fa-user-tie"></i>
               <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-haveli-primary rounded-full border-4 border-white flex items-center justify-center text-[10px] text-white">
                 <i className="fas fa-check"></i>
               </div>
             </div>
             <div>
-              <p className="text-haveli-accent uppercase tracking-[0.3em] font-bold text-[10px] mb-2">Heritage Club Portfolio</p>
-              <h1 className="text-4xl font-display font-bold text-haveli-heading uppercase tracking-tight">Welcome, {user.username}</h1>
+              <p className="text-[#C2A14D] uppercase tracking-[0.3em] font-bold text-[10px] mb-2">Heritage Club Portfolio</p>
+              
+              {/* THE LUXURY GOLD NAME DISPLAY */}
+              <h1 className="text-3xl md:text-4xl font-display font-bold text-haveli-heading uppercase tracking-tight flex flex-wrap items-baseline gap-2">
+                WELCOME, 
+                <span className="text-[#C2A14D] font-serif italic capitalize tracking-wide" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  {displayName}
+                </span>
+              </h1>
+              
               <p className="text-haveli-muted font-light mt-1 tracking-wide">{user.email || 'Verified Resident Member'}</p>
             </div>
           </div>
@@ -150,14 +179,14 @@ const UserProfile = () => {
             className={`pb-5 font-display font-bold text-lg uppercase tracking-widest transition-all relative ${activeTab === 'stays' ? 'text-haveli-heading' : 'text-haveli-muted hover:text-haveli-heading'}`}
           >
             My Residency History
-            {activeTab === 'stays' && <div className="absolute bottom-0 left-0 w-full h-1 bg-haveli-accent"></div>}
+            {activeTab === 'stays' && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#C2A14D]"></div>}
           </button>
           <button
             onClick={() => setActiveTab('settings')}
             className={`pb-5 font-display font-bold text-lg uppercase tracking-widest transition-all relative ${activeTab === 'settings' ? 'text-haveli-heading' : 'text-haveli-muted hover:text-haveli-heading'}`}
           >
             Folio Security
-            {activeTab === 'settings' && <div className="absolute bottom-0 left-0 w-full h-1 bg-haveli-accent"></div>}
+            {activeTab === 'settings' && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#C2A14D]"></div>}
           </button>
         </div>
 
@@ -212,19 +241,60 @@ const UserProfile = () => {
         {/* --- SETTINGS TAB --- */}
         {activeTab === 'settings' && (
           <div className="lux-card p-12 animate-fadeIn max-w-2xl relative bg-white overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-haveli-accent opacity-30"></div>
+            <div className="absolute top-0 left-0 w-full h-1 bg-[#C2A14D] opacity-30"></div>
             <h2 className="text-sm font-bold font-display text-haveli-heading mb-10 uppercase tracking-[0.3em] flex items-center">
-                <i className="fas fa-shield-alt mr-3 text-haveli-accent"></i> Folio Protection
+                <i className="fas fa-shield-alt mr-3 text-[#C2A14D]"></i> Identity & Security
             </h2>
 
             <div className="space-y-12">
               
-              {/* --- ENHANCED IDENTITY SECTION --- */}
+              {/* --- DISPLAY NAME SECTION --- */}
               <div>
                 <div className="flex justify-between items-end mb-3">
-                  <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest">Primary Membership Identity</label>
+                  <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest">Guest Display Name</label>
+                  {!isEditingFullName ? (
+                    <button onClick={() => setIsEditingFullName(true)} className="text-[10px] font-black text-[#C2A14D] uppercase tracking-widest hover:underline transition-all">
+                      <i className="fas fa-pen mr-1"></i> Edit
+                    </button>
+                  ) : (
+                    <div className="flex space-x-3">
+                      <button onClick={handleFullNameUpdate} className="text-[10px] font-black text-haveli-primary uppercase tracking-widest hover:underline transition-all">
+                        Save
+                      </button>
+                      <button 
+                        onClick={() => { setIsEditingFullName(false); setEditFullNameValue(user.fullName || ''); }} 
+                        className="text-[10px] font-black text-haveli-muted uppercase tracking-widest hover:underline transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                <div className={`text-lg font-medium text-[#C2A14D] bg-haveli-section px-8 py-5 rounded-2xl border border-haveli-border shadow-inner flex items-center transition-all ${isEditingFullName ? 'ring-1 ring-[#C2A14D] border-[#C2A14D]' : ''}`}>
+                  <i className="fas fa-id-badge mr-4 opacity-50"></i>
+                  {!isEditingFullName ? (
+                    <span className="font-serif italic capitalize tracking-wide">{user.fullName || 'Add your real name...'}</span>
+                  ) : (
+                    <input
+                      type="text"
+                      value={editFullNameValue}
+                      onChange={(e) => setEditFullNameValue(e.target.value)}
+                      placeholder="e.g. Vaibhav Deo"
+                      className="bg-transparent border-b border-[#C2A14D] focus:outline-none w-full font-serif italic transition-colors"
+                      autoFocus
+                      onKeyDown={(e) => e.key === 'Enter' && handleFullNameUpdate()}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* --- LOGIN USERNAME SECTION --- */}
+              <div className="border-t border-haveli-border pt-8">
+                <div className="flex justify-between items-end mb-3">
+                  <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest">Login Username</label>
                   {!isEditingName ? (
-                    <button onClick={() => setIsEditingName(true)} className="text-[10px] font-black text-haveli-accent uppercase tracking-widest hover:underline transition-all">
+                    <button onClick={() => setIsEditingName(true)} className="text-[10px] font-black text-haveli-muted uppercase tracking-widest hover:underline transition-all">
                       <i className="fas fa-pen mr-1"></i> Edit
                     </button>
                   ) : (
@@ -242,8 +312,8 @@ const UserProfile = () => {
                   )}
                 </div>
                 
-                <div className={`text-lg font-medium text-haveli-heading bg-haveli-section px-8 py-5 rounded-2xl border border-haveli-border shadow-inner flex items-center transition-all ${isEditingName ? 'ring-1 ring-haveli-accent border-haveli-accent' : ''}`}>
-                  <i className="fas fa-at mr-4 text-haveli-accent opacity-50"></i>
+                <div className={`text-lg font-medium text-haveli-heading bg-haveli-section px-8 py-5 rounded-2xl border border-haveli-border shadow-inner flex items-center transition-all ${isEditingName ? 'ring-1 ring-haveli-muted border-haveli-muted' : ''}`}>
+                  <i className="fas fa-at mr-4 text-haveli-muted opacity-50"></i>
                   {!isEditingName ? (
                     <span>{user.username}</span>
                   ) : (
@@ -251,7 +321,7 @@ const UserProfile = () => {
                       type="text"
                       value={editNameValue}
                       onChange={(e) => setEditNameValue(e.target.value)}
-                      className="bg-transparent border-b border-haveli-primary focus:border-haveli-accent focus:outline-none w-full text-haveli-heading font-display transition-colors"
+                      className="bg-transparent border-b border-haveli-primary focus:outline-none w-full text-haveli-heading font-display transition-colors"
                       autoFocus
                       onKeyDown={(e) => e.key === 'Enter' && handleNameUpdate()}
                     />
@@ -260,7 +330,7 @@ const UserProfile = () => {
               </div>
 
               {/* --- CREDENTIALS MANAGEMENT --- */}
-              <div>
+              <div className="border-t border-haveli-border pt-8">
                 <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-4">Credentials Management</label>
                 <button
                   onClick={() => setIsPasswordModalOpen(true)}

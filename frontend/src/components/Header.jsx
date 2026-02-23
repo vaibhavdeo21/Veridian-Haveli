@@ -18,6 +18,9 @@ const Header = () => {
 
   const closeMenu = () => setIsMenuOpen(false);
 
+  // Determine what to show in the Welcome Banner
+  const displayName = user?.fullName ? user.fullName : user?.username;
+
   return (
     /* FIXED REINFORCEMENT: 
        - !fixed ensures the position remains constant regardless of layout shifts.
@@ -92,8 +95,9 @@ const Header = () => {
                 </Link>
               </div>
 
+              {/* LUXURIOUS NAME DISPLAY */}
               <div className="text-haveli-body border border-haveli-border px-4 py-2 rounded-xl font-medium text-xs hidden md:block bg-haveli-section shadow-inner">
-                Hi, <span className="text-haveli-primary font-bold">{user.username}</span>
+                Hi, <span className="text-[#C2A14D] font-serif italic tracking-wide">{displayName}</span>
               </div>
 
               {user.role === 'admin' && (
