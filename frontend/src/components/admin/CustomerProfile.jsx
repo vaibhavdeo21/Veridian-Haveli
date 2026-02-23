@@ -16,6 +16,9 @@ const CustomerProfile = () => {
   const [selectedRoom, setSelectedRoom] = useState('');
   const [idFile, setIdFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // --- NEW: State to toggle Room Change mode ---
+  const [isChangingRoom, setIsChangingRoom] = useState(false);
 
   // Set Dynamic Page Title
   usePageTitle(customer ? `Guest: ${customer.guestName}` : "Guest Profile");
@@ -25,7 +28,12 @@ const CustomerProfile = () => {
     if (foundCustomer) {
       setCustomer(foundCustomer);
       setAmountPaid(foundCustomer.amountPaid || 0);
-      setSelectedRoom(foundCustomer.roomNumber?.includes('Online') ? '' : foundCustomer.roomNumber);
+      
+      // --- NEW: Smart Room Pre-selection ---
+      const hasPhysicalRoom = foundCustomer.roomNumber && !foundCustomer.roomNumber.toLowerCase().includes('online');
+      setSelectedRoom(hasPhysicalRoom ? foundCustomer.roomNumber : '');
+      // Only show dropdown by default if no physical room is assigned yet
+      setIsChangingRoom(!hasPhysicalRoom);
     }
   }, [id, customers]);
 
@@ -37,28 +45,16 @@ const CustomerProfile = () => {
   );
 
   // --- FIXED BILLING LOGIC: PREVENTS DOUBLE GST ---
-  // 1. Identify if this is a pre-taxed amount (Online bookings)
   const isPreTaxed = customer.roomNumber?.toLowerCase().includes('online');
-
-  // 2. Determine the true Base Room Price
-  // If online, we back-calculate the base (Total / 1.18). If offline, totalAmount is already the base.
   const roomTotalIncGST = customer.totalAmount || 0;
   const trueBaseRoomPrice = isPreTaxed ? (roomTotalIncGST / 1.18) : roomTotalIncGST;
-  
-  // 3. Calculate GST only on what is necessary
-  // If online, GST is the difference. If offline, calculate 18% on top.
   const roomGST = isPreTaxed ? (roomTotalIncGST - trueBaseRoomPrice) : (trueBaseRoomPrice * 0.18);
-  
-  // 4. Incidentals (Food is always taxed at 18%)
   const foodTotal = customer.foodCharges || 0;
   const foodGST = foodTotal * 0.18;
-
-  // 5. Final Totals
   const finalGST = roomGST + foodGST;
   const totalBill = roomTotalIncGST + foodTotal + foodGST; 
   const balanceLeft = totalBill - amountPaid;
 
-  // --- UPDATED STATUS LOGIC TO INCLUDE EXPIRED ---
   const normalizedStatus = (customer.status || "").replace(/\s/g, "").toLowerCase();
   const isCheckedIn = normalizedStatus === 'checkedin';
   const isCheckedOut = normalizedStatus === 'checkedout';
@@ -146,7 +142,6 @@ const CustomerProfile = () => {
         </button>
         
         <div className="flex flex-wrap gap-4">
-          {/* Prevent check-in if expired */}
           {(!isCheckedIn && !isCheckedOut && !isExpired) && (
             <button onClick={handleCheckIn} className="btn btn-primary h-12 px-8 shadow-md">
               <i className="fas fa-key mr-2 text-xs"></i> Confirm Residency
@@ -205,44 +200,64 @@ const CustomerProfile = () => {
              <i className="fas fa-door-open text-haveli-accent/20 text-4xl"></i>
           </div>
 
-          {/* Room Assignment for Online Bookings - Hidden if expired */}
+          {/* --- ENHANCED ROOM ASSIGNMENT BLOCK --- */}
           {(!isCheckedIn && !isCheckedOut && !isExpired) && (
-            <div className="bg-[#fffbeb] p-8 rounded-xl border border-haveli-accent/20">
-              <label className="block text-xs font-bold text-haveli-accent uppercase tracking-widest mb-4 flex items-center">
-                <i className="fas fa-concierge-bell mr-2"></i>
-                Allocate Heritage Suite ({expectedType ? expectedType.toUpperCase() : 'General'})
-              </label>
-              <div className="relative">
-                <select 
-                  value={selectedRoom} 
-                  onChange={(e) => setSelectedRoom(e.target.value)}
-                  className="w-full h-12 px-6 bg-white border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary outline-none transition-all font-bold text-haveli-heading appearance-none"
-                >
-                  <option value="" disabled>Browse Available Inventory...</option>
-                  {filteredRooms.length > 0 ? (
-                    filteredRooms.map(r => (
-                      <option key={r.roomNumber} value={r.roomNumber}>Suite {r.roomNumber} — {r.type}</option>
-                    ))
-                  ) : (
-                    <option value="" disabled>No vacant {expectedType || ''} suites available</option>
-                  )}
-                </select>
-                <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs"></i>
+            <div className="bg-[#fffbeb] p-8 rounded-xl border border-haveli-accent/20 transition-all">
+              <div className="flex justify-between items-center mb-4">
+                <label className="block text-xs font-bold text-haveli-accent uppercase tracking-widest flex items-center">
+                  <i className="fas fa-concierge-bell mr-2"></i>
+                  {isChangingRoom ? `Allocate Heritage Suite (${expectedType ? expectedType.toUpperCase() : 'General'})` : 'Assigned Heritage Suite'}
+                </label>
+                
+                {/* Toggle Buttons */}
+                {!isChangingRoom && (
+                  <button onClick={() => setIsChangingRoom(true)} className="text-[10px] font-black text-haveli-primary uppercase tracking-widest hover:underline flex items-center transition-all">
+                    <i className="fas fa-exchange-alt mr-1"></i> Change Room
+                  </button>
+                )}
+                {(isChangingRoom && customer.roomNumber && !customer.roomNumber.toLowerCase().includes('online')) && (
+                   <button onClick={() => { setIsChangingRoom(false); setSelectedRoom(customer.roomNumber); }} className="text-[10px] font-black text-haveli-muted uppercase tracking-widest hover:underline flex items-center transition-all">
+                    Cancel Change
+                  </button>
+                )}
               </div>
+
+              {isChangingRoom ? (
+                <div className="relative animate-fadeIn">
+                  <select 
+                    value={selectedRoom} 
+                    onChange={(e) => setSelectedRoom(e.target.value)}
+                    className="w-full h-12 px-6 bg-white border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary outline-none transition-all font-bold text-haveli-heading appearance-none shadow-sm"
+                  >
+                    <option value="" disabled>Browse Available Inventory...</option>
+                    {filteredRooms.length > 0 ? (
+                      filteredRooms.map(r => (
+                        <option key={r.roomNumber} value={r.roomNumber}>Suite {r.roomNumber} — {r.type}</option>
+                      ))
+                    ) : (
+                      <option value="" disabled>No vacant {expectedType || ''} suites available</option>
+                    )}
+                  </select>
+                  <i className="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs"></i>
+                </div>
+              ) : (
+                 <div className="w-full h-12 px-6 bg-white border border-haveli-border rounded-xl flex items-center justify-between font-bold text-haveli-heading shadow-sm animate-fadeIn">
+                    <span>Suite {selectedRoom}</span>
+                    <i className="fas fa-check-circle text-haveli-primary"></i>
+                 </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Financials & ID Upload Card */}
         <div className="space-y-8">
-          {/* Billing Card */}
           <div className="lux-card bg-white border-haveli-border relative overflow-hidden">
             <h3 className="text-sm font-bold border-b border-haveli-border pb-4 mb-6 text-haveli-heading uppercase tracking-widest font-display flex items-center">
                 <i className="fas fa-file-invoice-dollar mr-2 text-haveli-accent"></i>
                 Folio Billing
             </h3>
             <div className="space-y-4 mb-8">
-              {/* Show the correctly categorized Suite Total */}
               <BillRow label="Suite Total" value={roomTotalIncGST} />
               <BillRow label="Culinary Charges" value={foodTotal} />
               <BillRow label="Heritage Tax (18%)" value={finalGST} isGst />
@@ -274,7 +289,6 @@ const CustomerProfile = () => {
             </div>
           </div>
 
-          {/* ID Registry Card */}
           <div className="lux-card bg-white border-haveli-border">
             <h3 className="text-sm font-bold border-b border-haveli-border pb-4 mb-6 text-haveli-heading uppercase tracking-widest font-display flex items-center">
                 <i className="fas fa-id-card mr-2 text-haveli-accent"></i>
