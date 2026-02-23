@@ -153,4 +153,27 @@ router.post('/google', async (req, res) => {
   }
 });
 
+router.put('/update-profile', auth, async (req, res) => {
+  const { username } = req.body;
+
+  try {
+    // Check if the new username is already taken by someone else
+    let existingUser = await User.findOne({ username });
+    if (existingUser && existingUser._id.toString() !== req.user.id) {
+      return res.status(400).json({ msg: 'Username is already taken' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { username } },
+      { new: true }
+    ).select('-password');
+
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;
