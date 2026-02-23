@@ -13,31 +13,58 @@ const upload = require('../middleware/uploadMiddleware');
 // @route   GET api/bookings
 router.get('/', async (req, res) => {
   try {
-    // --- NEW AUTO-CLEANUP LOGIC ---
-    // Get today's date and set the time to midnight for accurate comparison
+    // --- ADVANCED AUTO-CLEANUP & ROOM UNLOCK LOGIC ---
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 1. AUTO-CHECKOUT: If they were checked in and the checkout date passed
-    await Booking.updateMany(
-      { 
-        status: { $regex: /checked\s*in/i }, 
-        checkOutDate: { $lt: today } 
-      },
-      { $set: { status: 'Checked Out' } }
-    );
+    // 1. Find all bookings that are past their checkout date
+    const toCheckOut = await Booking.find({
+      status: { $regex: /checked\s*in/i },
+      checkOutDate: { $lt: today }
+    });
 
-    // 2. AUTO-EXPIRE: If they were booked but never arrived and the date passed
-    await Booking.updateMany(
-      { 
-        status: { $regex: /booked/i }, 
-        checkOutDate: { $lt: today } 
-      },
-      { $set: { status: 'Expired' } } 
-    );
-    // ------------------------------
+    const toExpire = await Booking.find({
+      status: { $regex: /booked/i },
+      checkOutDate: { $lt: today }
+    });
 
-    // 3. Fetch the newly cleaned database records
+    // 2. Extract physical room numbers that need to be freed up
+    const roomsToFree = [];
+
+    const extractRoom = (booking) => {
+      if (booking.roomNumber && !booking.roomNumber.toLowerCase().includes('online')) {
+        roomsToFree.push(booking.roomNumber);
+      }
+    };
+
+    toCheckOut.forEach(extractRoom);
+    toExpire.forEach(extractRoom);
+
+    // 3. Update the Booking statuses
+    if (toCheckOut.length > 0) {
+      await Booking.updateMany(
+        { _id: { $in: toCheckOut.map(b => b._id) } },
+        { $set: { status: 'Checked Out' } }
+      );
+    }
+
+    if (toExpire.length > 0) {
+      await Booking.updateMany(
+        { _id: { $in: toExpire.map(b => b._id) } },
+        { $set: { status: 'Expired' } }
+      );
+    }
+
+    // 4. Unlock the actual Rooms in the Room Database
+    if (roomsToFree.length > 0) {
+      await Room.updateMany(
+        { roomNumber: { $in: roomsToFree } },
+        { $set: { availability: 'Available' } }
+      );
+    }
+    // ------------------------------------------------
+
+    // 5. Fetch the newly cleaned database records
     const bookings = await Booking.find().sort({ createdAt: -1 });
     res.json(bookings);
   } catch (err) {

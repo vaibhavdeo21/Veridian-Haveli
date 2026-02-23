@@ -3,13 +3,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useData } from '../context/DataContext.jsx';
+import { useNotification } from '../context/NotificationContext.jsx'; // NEW: Imported for cancel alerts
 import ChangePasswordModal from '../components/ChangePasswordModal.jsx';
+import axios from 'axios'; // NEW: Imported for the cancel API request
 
 const UserProfile = () => {
   usePageTitle("My Stay | VERIDIAN HAVELI");
-  // Added updateFullName to context extraction
   const { user, updateUsername, updateFullName } = useAuth(); 
   const { customers } = useData();
+  const { showNotification } = useNotification(); // NEW: Hook initialized
 
   const [activeTab, setActiveTab] = useState('stays');
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -18,7 +20,7 @@ const UserProfile = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(user?.username || '');
 
-  // --- NEW: Edit Full Name State ---
+  // --- Edit Full Name State ---
   const [isEditingFullName, setIsEditingFullName] = useState(false);
   const [editFullNameValue, setEditFullNameValue] = useState(user?.fullName || '');
 
@@ -61,6 +63,29 @@ const UserProfile = () => {
     }
   };
 
+  // --- NEW: CANCEL BOOKING HANDLER ---
+  const handleCancelBooking = async (booking) => {
+    const isOnlinePayment = booking.paymentMode !== 'PayAtHotel';
+    
+    // Smart warning based on payment type
+    const confirmMessage = isOnlinePayment 
+      ? "WARNING: You have settled this folio online. As per our strict policy, online payments are non-refundable under any circumstances. Are you sure you wish to cancel this reservation?"
+      : "Are you sure you want to cancel this upcoming reservation? This action cannot be undone.";
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        await axios.patch(`/api/bookings/${booking._id || booking.id}`, { status: 'Cancelled' });
+        showNotification('Reservation has been successfully cancelled.', 'info');
+        
+        // Reload page to seamlessly sync the newly cancelled status across all tabs and data contexts
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        console.error("Cancellation Error:", err);
+        showNotification('Failed to cancel reservation. Please contact concierge.', 'error');
+      }
+    }
+  };
+
   // --- 1. FILTER & CATEGORIZE BOOKINGS ---
   const { currentStays, upcomingStays, pastStays } = useMemo(() => {
     const today = new Date();
@@ -84,7 +109,6 @@ const UserProfile = () => {
       if (normalizedStatus === 'checkedin') {
         current.push(booking);
       }
-      // UPDATE: Added 'expired' to the past stays array conditions
       else if (normalizedStatus === 'checkedout' || normalizedStatus === 'cancelled' || normalizedStatus === 'expired') {
         past.push(booking);
       }
@@ -214,7 +238,8 @@ const UserProfile = () => {
               </h2>
               {upcomingStays.length > 0 ? (
                 <div className="grid gap-10">
-                  {upcomingStays.map(booking => <StayCard key={booking._id || booking.id} booking={booking} financials={calculateFinancials(booking)} type="upcoming" />)}
+                  {/* NEW: Passed down the onCancel function */}
+                  {upcomingStays.map(booking => <StayCard key={booking._id || booking.id} booking={booking} financials={calculateFinancials(booking)} type="upcoming" onCancel={() => handleCancelBooking(booking)} />)}
                 </div>
               ) : (
                 <div className="lux-card p-16 bg-white border-dashed text-center">
@@ -357,7 +382,8 @@ const UserProfile = () => {
 };
 
 // --- Sub-Component: Stay Card ---
-const StayCard = ({ booking, financials, type }) => {
+// NEW: Added onCancel prop
+const StayCard = ({ booking, financials, type, onCancel }) => {
   const { roomTotalIncGST, foodTotalWithGST, lateNightFee, grandTotal, amountPaid, balance } = financials;
 
   const statusColors = {
@@ -366,11 +392,12 @@ const StayCard = ({ booking, financials, type }) => {
     past: 'bg-haveli-section text-haveli-muted border-haveli-border'
   };
 
-  // UPDATE: Dynamically set the past status text based on the database status
+  const normalizedStatus = (booking.status || "").replace(/\s/g, "").toLowerCase();
+
   const statusText = {
     current: 'In-Residence',
     upcoming: 'Confirmed Registry',
-    past: booking.status === 'Expired' ? 'Expired / No-Show' : 'Stay Concluded'
+    past: (normalizedStatus === 'expired' || normalizedStatus === 'noshow') ? 'Expired / No-Show' : (normalizedStatus === 'cancelled' ? 'Cancelled' : 'Stay Concluded')
   };
 
   return (
@@ -448,6 +475,16 @@ const StayCard = ({ booking, financials, type }) => {
           <span className="text-[10px] uppercase tracking-widest mt-0.5">Folio Balance</span>
           <span className="font-display text-2xl tracking-tighter">₹{Math.max(0, balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
         </div>
+
+        {/* --- NEW: Cancellation Button for Future Reservations --- */}
+        {type === 'upcoming' && (
+          <button 
+            onClick={onCancel}
+            className="w-full mt-6 py-3 rounded-xl border-2 border-red-100 text-red-600 font-bold text-[10px] uppercase tracking-widest hover:bg-red-50 hover:border-red-200 transition-all flex items-center justify-center group shadow-sm"
+          >
+            <i className="fas fa-times-circle mr-2 text-sm group-hover:scale-110 transition-transform"></i> Cancel Reservation
+          </button>
+        )}
       </div>
 
     </div>
