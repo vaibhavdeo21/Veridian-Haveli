@@ -177,4 +177,18 @@ router.put('/update-username', auth, async (req, res) => {
   }
 });
 
+router.put('/update-fullname', auth, async (req, res) => {
+  const { fullName } = req.body;
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { fullName } },
+      { new: true }
+    ).select('-password');
+    res.json(user);
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;
