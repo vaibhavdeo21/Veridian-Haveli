@@ -16,11 +16,8 @@ const CustomerProfile = () => {
   const [selectedRoom, setSelectedRoom] = useState('');
   const [idFile, setIdFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  
-  // --- NEW: State to toggle Room Change mode ---
   const [isChangingRoom, setIsChangingRoom] = useState(false);
 
-  // Set Dynamic Page Title
   usePageTitle(customer ? `Guest: ${customer.guestName}` : "Guest Profile");
 
   useEffect(() => {
@@ -29,10 +26,8 @@ const CustomerProfile = () => {
       setCustomer(foundCustomer);
       setAmountPaid(foundCustomer.amountPaid || 0);
       
-      // --- NEW: Smart Room Pre-selection ---
       const hasPhysicalRoom = foundCustomer.roomNumber && !foundCustomer.roomNumber.toLowerCase().includes('online');
       setSelectedRoom(hasPhysicalRoom ? foundCustomer.roomNumber : '');
-      // Only show dropdown by default if no physical room is assigned yet
       setIsChangingRoom(!hasPhysicalRoom);
     }
   }, [id, customers]);
@@ -44,7 +39,6 @@ const CustomerProfile = () => {
     </div>
   );
 
-  // --- FIXED BILLING LOGIC: PREVENTS DOUBLE GST ---
   const isPreTaxed = customer.roomNumber?.toLowerCase().includes('online');
   const roomTotalIncGST = customer.totalAmount || 0;
   const trueBaseRoomPrice = isPreTaxed ? (roomTotalIncGST / 1.18) : roomTotalIncGST;
@@ -60,7 +54,6 @@ const CustomerProfile = () => {
   const isCheckedOut = normalizedStatus === 'checkedout';
   const isExpired = normalizedStatus === 'expired' || normalizedStatus === 'noshow';
 
-  // --- BULLETPROOF ROOM FILTERING LOGIC ---
   const getExpectedRoomType = (roomString) => {
     if (!roomString) return null;
     const str = roomString.toLowerCase();
@@ -134,7 +127,6 @@ const CustomerProfile = () => {
 
   return (
     <div className="max-w-6xl mx-auto pb-20 animate-fadeIn">
-      {/* Header Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
         <button onClick={() => navigate(-1)} className="btn btn-outline h-12 px-6 group">
           <i className="fas fa-arrow-left mr-2 transition-transform group-hover:-translate-x-1"></i> 
@@ -165,7 +157,6 @@ const CustomerProfile = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         
-        {/* Profile Card */}
         <div className="lux-card lg:col-span-2 relative overflow-hidden bg-white">
           <div className="absolute top-0 left-0 w-1 h-full bg-haveli-accent"></div>
           
@@ -200,7 +191,6 @@ const CustomerProfile = () => {
              <i className="fas fa-door-open text-haveli-accent/20 text-4xl"></i>
           </div>
 
-          {/* --- ENHANCED ROOM ASSIGNMENT BLOCK --- */}
           {(!isCheckedIn && !isCheckedOut && !isExpired) && (
             <div className="bg-[#fffbeb] p-8 rounded-xl border border-haveli-accent/20 transition-all">
               <div className="flex justify-between items-center mb-4">
@@ -209,7 +199,6 @@ const CustomerProfile = () => {
                   {isChangingRoom ? `Allocate Heritage Suite (${expectedType ? expectedType.toUpperCase() : 'General'})` : 'Assigned Heritage Suite'}
                 </label>
                 
-                {/* Toggle Buttons */}
                 {!isChangingRoom && (
                   <button onClick={() => setIsChangingRoom(true)} className="text-[10px] font-black text-haveli-primary uppercase tracking-widest hover:underline flex items-center transition-all">
                     <i className="fas fa-exchange-alt mr-1"></i> Change Room
@@ -250,7 +239,6 @@ const CustomerProfile = () => {
           )}
         </div>
 
-        {/* Financials & ID Upload Card */}
         <div className="space-y-8">
           <div className="lux-card bg-white border-haveli-border relative overflow-hidden">
             <h3 className="text-sm font-bold border-b border-haveli-border pb-4 mb-6 text-haveli-heading uppercase tracking-widest font-display flex items-center">
@@ -259,6 +247,15 @@ const CustomerProfile = () => {
             </h3>
             <div className="space-y-4 mb-8">
               <BillRow label="Suite Total" value={roomTotalIncGST} />
+              
+              {/* --- NEW EXPLICIT ADMIN BADGE FOR 5% DISCOUNT --- */}
+              {customer.isRepeatCustomer && (
+                 <div className="flex justify-between items-center text-haveli-primary bg-[#ecfdf5] p-3 rounded-lg border border-haveli-primary/20 shadow-sm animate-fadeIn">
+                   <span className="text-[10px] font-black tracking-widest uppercase"><i className="fas fa-award mr-2 text-lg"></i>Heritage Reward</span>
+                   <span className="text-xs font-bold">-5% Applied</span>
+                 </div>
+              )}
+
               <BillRow label="Culinary Charges" value={foodTotal} />
               <BillRow label="Heritage Tax (18%)" value={finalGST} isGst />
               <div className="flex justify-between items-center pt-5 border-t border-haveli-border mt-4">
@@ -338,7 +335,6 @@ const CustomerProfile = () => {
   );
 };
 
-// Helper Components for Cleaner Render
 const InfoBox = ({ label, value, icon }) => (
     <div className="bg-haveli-section p-4 rounded-xl border border-haveli-border hover:border-haveli-accent/30 transition-colors">
       <div className="flex items-center mb-2">

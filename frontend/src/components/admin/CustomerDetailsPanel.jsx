@@ -269,11 +269,10 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
-  // --- UPDATED STATUS LOGIC TO INCLUDE EXPIRED ---
   const normalizedStatus = (customer.status || "").replace(/\s/g, "").toLowerCase();
   const isCheckedIn = normalizedStatus === 'checkedin';
   const isCheckedOut = normalizedStatus === 'checkedout';
-  const isExpired = normalizedStatus === 'expired' || normalizedStatus === 'noshow'; // Catch both variations
+  const isExpired = normalizedStatus === 'expired' || normalizedStatus === 'noshow'; 
   const isOnlinePlaceholder = customer.roomNumber?.toLowerCase().includes('online');
 
   const handleStatusChange = (e) => {
@@ -340,7 +339,6 @@ const CustomerRow = ({ customer, isExpanded, onToggleExpand, onCheckIn, onCheckO
           </select>
         </td>
 
-        {/* --- UPDATED STATUS BADGE CELL --- */}
         <td className="px-6 py-5 whitespace-nowrap text-center">
           <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border 
             ${isCheckedIn ? 'bg-[#ecfdf5] text-haveli-primary border-haveli-primary/20' :
@@ -490,6 +488,15 @@ const CustomerExpenseDropdown = ({ customer }) => {
                 <span className="text-haveli-body font-light">Heritage Suite Charges ({customer.stayDuration || 1} nights)</span>
                 <span className="font-bold text-haveli-heading">₹{roomCharge.toLocaleString()}</span>
               </li>
+              
+              {/* --- EXPLICIT ADMIN BADGE FOR 5% DISCOUNT --- */}
+              {customer.isRepeatCustomer && (
+                 <li className="flex justify-between items-center text-xs text-haveli-primary bg-[#ecfdf5] p-2 rounded border border-haveli-primary/20 font-bold">
+                   <span className="uppercase tracking-widest"><i className="fas fa-award mr-2 text-sm"></i>Heritage Reward</span>
+                   <span>-5% Applied</span>
+                 </li>
+              )}
+
               {customer.lateFee > 0 && (
                 <li className="flex justify-between text-xs text-red-600 font-medium">
                   <span>Late Departure Penalty</span>

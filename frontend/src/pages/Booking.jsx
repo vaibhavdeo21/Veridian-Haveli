@@ -28,6 +28,7 @@ const Booking = () => {
   const { user, updateActiveBooking } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [paymentMode, setPaymentMode] = useState('OnlineFull'); 
   const [dates, setDates] = useState({
     checkIn: getToday(),
     checkOut: getTomorrow(),
@@ -50,19 +51,18 @@ const Booking = () => {
     requests: '',
   });
 
-  // --- STREAMLINED REPEAT CUSTOMER LOGIC ---
+  // --- PERFECT SYNC REPEAT CUSTOMER LOGIC ---
   const isRepeatCustomer = useMemo(() => {
-    if (!user || !Array.isArray(customers)) return false;
-    
-    return customers.some(c => {
-      // 1. Primary Check: Does the unchangeable email match?
-      const emailMatch = Boolean(user.email && c.email && c.email === user.email);
-      
-      // 2. Safety Fallback: Does the hidden Database ID match? 
-      const idMatch = Boolean(c.userId && user._id && c.userId === user._id);
-      
-      return emailMatch || idMatch;
-    });
+    if (!user || !customers) return false;
+
+    // Use the EXACT SAME logic as UserProfile.jsx to guarantee synchronization
+    const userBookings = customers.filter(c =>
+      c.email === user.email ||
+      c.username === user.username ||
+      (c.guestName && c.guestName.toLowerCase().includes(user.username.toLowerCase()))
+    );
+
+    return userBookings.length > 0;
   }, [user, customers]);
 
   const roomAvailability = useMemo(() => {
@@ -188,7 +188,7 @@ const Booking = () => {
     goToStep(3);
   };
 
-  const handleConfirmBooking = async (paymentMode, amountPaid) => {
+  const handleConfirmBooking = async (paymentModeToSubmit, amountPaid) => {
     let success = true;
     const finalGuestDetails = {
       ...guestDetails,
@@ -202,14 +202,9 @@ const Booking = () => {
       if (data.quantity > 0) {
         for (let i = 0; i < data.quantity; i++) {
           
-          // Calculate the base price per suite
           const basePricePerSuite = data.subtotal / data.quantity;
-          
-          // Apply repeat discount on the base price
           const discountPerSuite = isRepeatCustomer ? (basePricePerSuite * 0.05) : 0;
           const discountedBasePerSuite = basePricePerSuite - discountPerSuite;
-          
-          // Explicit tax calculation
           const taxOnThisSuite = discountedBasePerSuite * TAX_RATE;
 
           const roomData = {
@@ -223,7 +218,7 @@ const Booking = () => {
           const perRoomPaid = amountPaid / (Object.values(roomTotals.details).reduce((sum, d) => sum + d.quantity, 0));
 
           try {
-            await addCustomer(finalGuestDetails, roomData, paymentMode, perRoomPaid);
+            await addCustomer(finalGuestDetails, roomData, paymentModeToSubmit, perRoomPaid);
           } catch (error) {
             success = false;
           }
@@ -362,8 +357,8 @@ const Booking = () => {
           <div className="animate-fadeIn max-w-5xl mx-auto">
             <h2 className="text-3xl font-bold mb-10 font-display text-center text-haveli-heading">Folio Review</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              <BookingReview dates={dates} nights={nights} roomTotals={roomTotals} finalTotals={finalTotals} guest={guestDetails} />
-              <PaymentForm finalTotals={finalTotals} onConfirm={handleConfirmBooking} />
+              <BookingReview dates={dates} nights={nights} roomTotals={roomTotals} finalTotals={finalTotals} guest={guestDetails} paymentMode={paymentMode} />
+              <PaymentForm finalTotals={finalTotals} onConfirm={handleConfirmBooking} paymentMode={paymentMode} setPaymentMode={setPaymentMode} />
             </div>
             <div className="flex justify-between mt-12">
               <button onClick={() => goToStep(2)} className="text-haveli-muted hover:text-haveli-heading h-12 px-8 font-medium transition flex items-center">
@@ -485,74 +480,88 @@ const FormInput = ({ label, id, type = 'text', value, onChange, required = false
   </div>
 );
 
-// --- UPDATED Review with clear GST breakdown ---
-const BookingReview = ({ dates, nights, roomTotals, finalTotals, guest }) => (
-  <div className="bg-haveli-card border border-haveli-border rounded-xl p-10 flex flex-col h-full shadow-sm">
-    <h3 className="text-2xl font-bold mb-10 font-display text-haveli-heading border-b border-haveli-border pb-4">
-      Stay Overview
-    </h3>
-    <div className="space-y-8 flex-grow">
-      <div className="flex justify-between items-center"><span className="text-haveli-muted uppercase tracking-widest text-[10px] font-bold">Primary Resident</span><span className="font-bold text-haveli-heading">{guest.firstName} {guest.lastName}</span></div>
-      <div className="flex justify-between items-center">
-        <div>
-          <h4 className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-1">Check-in</h4>
-          <p className="font-bold text-haveli-heading">{dates.checkIn}</p>
-        </div>
-        <div className="text-haveli-accent opacity-50"><i className="fas fa-arrow-right text-lg"></i></div>
-        <div className="text-right">
-          <h4 className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-1">Check-out</h4>
-          <p className="font-bold text-haveli-heading">{dates.checkOut}</p>
-        </div>
-      </div>
+const BookingReview = ({ dates, nights, roomTotals, finalTotals, guest, paymentMode }) => {
+  const isPartial = paymentMode === 'OnlinePartial';
+  const isPayAtHotel = paymentMode === 'PayAtHotel';
+  const displayMultiplier = isPartial ? 0.5 : 1;
 
-      <div className="bg-haveli-section border border-haveli-border p-5 rounded-xl flex justify-between items-center">
-        <span className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest">Confirmed Duration</span>
-        <span className="font-display font-bold text-haveli-primary text-xl">{nights} Nights</span>
-      </div>
+  const displayRoomTotal = finalTotals.roomTotal * displayMultiplier;
+  const displayDiscount = finalTotals.discountAmount * displayMultiplier;
+  const displayTax = finalTotals.tax * displayMultiplier;
+  const displayGrandTotal = finalTotals.grandTotal * displayMultiplier;
 
-      <div className="space-y-4 pt-6 border-t border-haveli-border">
-        {Object.entries(roomTotals.details).map(([key, data]) => (
-          <div key={key} className="flex justify-between text-sm">
-            <span className="text-haveli-body font-light">{data.name} (x{data.quantity})</span>
-            <span className="font-bold text-haveli-heading">₹{data.subtotal.toLocaleString()}</span>
+  return (
+    <div className="bg-haveli-card border border-haveli-border rounded-xl p-10 flex flex-col h-full shadow-sm transition-all duration-500">
+      <h3 className="text-2xl font-bold mb-10 font-display text-haveli-heading border-b border-haveli-border pb-4">
+        Stay Overview
+      </h3>
+      <div className="space-y-8 flex-grow">
+        <div className="flex justify-between items-center"><span className="text-haveli-muted uppercase tracking-widest text-[10px] font-bold">Primary Resident</span><span className="font-bold text-haveli-heading">{guest.firstName} {guest.lastName}</span></div>
+        <div className="flex justify-between items-center">
+          <div>
+            <h4 className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-1">Check-in</h4>
+            <p className="font-bold text-haveli-heading">{dates.checkIn}</p>
           </div>
-        ))}
-      </div>
-
-      {/* DETAILED GST & TOTAL BREAKDOWN */}
-      <div className="border-t border-haveli-border pt-6 mt-auto space-y-3">
-        <div className="flex justify-between text-xs font-medium text-haveli-body px-1">
-          <span>Base Room Total</span>
-          <span>₹{finalTotals.roomTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-        </div>
-        
-        {finalTotals.discountAmount > 0 && (
-          <div className="flex justify-between text-xs text-haveli-primary font-bold bg-haveli-section p-3 rounded-lg border border-haveli-border shadow-sm">
-            <span><i className="fas fa-award mr-2"></i>Heritage Reward (5%)</span>
-            <span>- ₹{finalTotals.discountAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+          <div className="text-haveli-accent opacity-50"><i className="fas fa-arrow-right text-lg"></i></div>
+          <div className="text-right">
+            <h4 className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest mb-1">Check-out</h4>
+            <p className="font-bold text-haveli-heading">{dates.checkOut}</p>
           </div>
-        )}
-
-        <div className="flex justify-between text-xs text-haveli-muted font-bold px-1 pt-2 border-t border-haveli-border/50">
-          <span>Heritage Tax (18% GST)</span>
-          <span>+ ₹{finalTotals.tax.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
         </div>
 
-        <div className="flex justify-between items-end font-bold text-2xl text-haveli-heading pt-4 border-t border-dashed border-haveli-border mt-2">
-          <div className="flex flex-col">
-            <span className="font-display">Total Folio</span>
-            <span className="text-[9px] font-medium text-haveli-muted uppercase tracking-widest mt-1">Inclusive of all taxes</span>
+        <div className="bg-haveli-section border border-haveli-border p-5 rounded-xl flex justify-between items-center">
+          <span className="text-[10px] font-bold text-haveli-muted uppercase tracking-widest">Confirmed Duration</span>
+          <span className="font-display font-bold text-haveli-primary text-xl">{nights} Nights</span>
+        </div>
+
+        <div className="space-y-4 pt-6 border-t border-haveli-border">
+          {Object.entries(roomTotals.details).map(([key, data]) => (
+            <div key={key} className="flex justify-between text-sm items-center">
+              <span className="text-haveli-body font-light">
+                {data.name} (x{data.quantity})
+                {isPartial && <span className="text-[9px] text-haveli-accent font-bold uppercase tracking-widest ml-2 bg-haveli-accent/10 px-2 py-0.5 rounded">50% Advance</span>}
+              </span>
+              <span className="font-bold text-haveli-heading">₹{(data.subtotal * displayMultiplier).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t border-haveli-border pt-6 mt-auto space-y-3">
+          <div className="flex justify-between text-xs font-medium text-haveli-body px-1">
+            <span>{isPartial ? 'Advance Base Total (50%)' : 'Base Room Total'}</span>
+            <span>₹{displayRoomTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
           </div>
-          <span className="text-haveli-accent">₹{finalTotals.grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+          
+          {displayDiscount > 0 && (
+            <div className="flex justify-between text-xs text-haveli-primary font-bold bg-haveli-section p-3 rounded-lg border border-haveli-border shadow-sm">
+              <span><i className="fas fa-award mr-2"></i>Heritage Reward (5%)</span>
+              <span>- ₹{displayDiscount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            </div>
+          )}
+
+          <div className="flex justify-between text-xs text-haveli-muted font-bold px-1 pt-2 border-t border-haveli-border/50">
+            <span>{isPartial ? 'Advance Heritage Tax (18% GST)' : 'Heritage Tax (18% GST)'}</span>
+            <span>+ ₹{displayTax.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+          </div>
+
+          <div className="flex justify-between items-end font-bold text-2xl text-haveli-heading pt-4 border-t border-dashed border-haveli-border mt-2">
+            <div className="flex flex-col">
+              <span className="font-display">
+                {isPayAtHotel ? 'Due at Arrival' : 'Total Payable Now'}
+              </span>
+              <span className="text-[9px] font-medium text-haveli-muted uppercase tracking-widest mt-1">
+                {isPayAtHotel ? 'No initial deposit required' : 'Inclusive of all taxes'}
+              </span>
+            </div>
+            <span className="text-haveli-accent">₹{displayGrandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-// --- UPDATED Payment Form with Strict Warning ---
-const PaymentForm = ({ finalTotals, onConfirm }) => {
-  const [paymentMode, setPaymentMode] = useState('OnlineFull');
+const PaymentForm = ({ finalTotals, onConfirm, paymentMode, setPaymentMode }) => {
   const [method, setMethod] = useState('Credit Card');
 
   const amountToPay = paymentMode === 'OnlineFull'
@@ -568,7 +577,6 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
       </h3>
 
       <div className="space-y-4 mb-8">
-        {/* Full Payment */}
         <div
           onClick={() => setPaymentMode('OnlineFull')}
           className={`border h-24 rounded-xl p-6 cursor-pointer transition flex flex-col justify-center ${paymentMode === 'OnlineFull' ? 'border-haveli-primary bg-haveli-section shadow-sm' : 'border-haveli-border bg-white hover:border-haveli-accent'}`}
@@ -583,7 +591,6 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
           <p className="text-[10px] text-haveli-muted mt-2 ml-7 uppercase tracking-widest font-medium">Suite inventory is locked immediately.</p>
         </div>
 
-        {/* 50% Advance */}
         <div
           onClick={() => setPaymentMode('OnlinePartial')}
           className={`border h-24 rounded-xl p-6 cursor-pointer transition flex flex-col justify-center ${paymentMode === 'OnlinePartial' ? 'border-haveli-primary bg-haveli-section shadow-sm' : 'border-haveli-border bg-white hover:border-haveli-accent'}`}
@@ -598,7 +605,6 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
           <p className="text-[10px] text-haveli-muted mt-2 ml-7 uppercase tracking-widest font-medium">Lock suite now. Settle balance at arrival.</p>
         </div>
 
-        {/* Pay at Hotel */}
         <div
           onClick={() => setPaymentMode('PayAtHotel')}
           className={`border rounded-xl p-6 cursor-pointer transition flex flex-col justify-center ${paymentMode === 'PayAtHotel' ? 'border-haveli-accent bg-haveli-section shadow-sm' : 'border-haveli-border bg-white hover:border-haveli-accent'}`}
@@ -642,7 +648,6 @@ const PaymentForm = ({ finalTotals, onConfirm }) => {
         </div>
       )}
 
-      {/* --- NEW: Strict Non-Refundable Warning --- */}
       {paymentMode !== 'PayAtHotel' && (
         <div className="mt-auto mb-6 bg-[#fef2f2] border border-red-200 p-5 rounded-xl flex items-start shadow-inner animate-fadeIn">
           <i className="fas fa-exclamation-triangle mt-0.5 mr-3 text-red-600 text-lg"></i>

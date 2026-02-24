@@ -1,75 +1,65 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext.jsx'; 
-import { useAuth } from '../context/AuthContext.jsx'; // Import Auth
+import { useAuth } from '../context/AuthContext.jsx'; 
 
 const SERVICE_CHARGE_RATE = 0.05;
 
 const Order = () => {
-  const { foodMenu, addOrder, customers } = useData(); // Get addOrder and customers from context
-  const { user } = useAuth(); // Hook into auth
+  const { foodMenu, addOrder, customers } = useData(); 
+  const { user } = useAuth(); 
   
   const [activeCategory, setActiveCategory] = useState('breakfast');
   const [cart, setCart] = useState({});
   const [guestInfo, setGuestInfo] = useState({ roomNumber: '', guestName: '', specialInstructions: '' });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- NEW FEATURE: AUTO-FILL & ROOM DROPDOWN LOGIC ---
+  // --- ALL HOOKS MUST BE DECLARED AT THE TOP ---
+
   // Find all rooms currently "Checked In" for this specific user
   const activeRooms = useMemo(() => {
     if (!user || !customers) return [];
-    return customers.filter(c => 
-      (c.email === user.email || c.username === user.username) && 
-      (c.status || '').replace(/\s/g, "").toLowerCase() === 'checkedin'
-    );
+    
+    return customers.filter(c => {
+      // 1. Check if this booking belongs to the logged-in user
+      const isUserMatch = 
+        (c.email && user.email && c.email === user.email) || 
+        (c.username && user.username && c.username === user.username) || 
+        (c.guestName && user.username && c.guestName.toLowerCase().includes(user.username.toLowerCase())) ||
+        (c.guestName && user.fullName && c.guestName.toLowerCase().includes(user.fullName.toLowerCase()));
+
+      // 2. Check if the status is exactly "Checked In"
+      const isCheckedIn = (c.status || '').replace(/\s/g, "").toLowerCase() === 'checkedin';
+
+      return isUserMatch && isCheckedIn;
+    });
   }, [user, customers]);
 
   // Effect to auto-fill details based on active check-ins
   useEffect(() => {
     if (activeRooms.length > 0) {
-      // If only one room, auto-select it. If multiple, default to the first but let them change it.
       setGuestInfo(prev => ({
         ...prev,
-        guestName: activeRooms[0].guestName || user.username,
+        guestName: activeRooms[0].guestName || user?.fullName || user?.username,
         roomNumber: prev.roomNumber || activeRooms[0].roomNumber
       }));
     } else if (user) {
-      setGuestInfo(prev => ({ ...prev, guestName: user.username }));
+      setGuestInfo(prev => ({ ...prev, guestName: user?.fullName || user?.username }));
     }
   }, [activeRooms, user]);
 
-  // --- HARD BLOCK 1: MUST BE LOGGED IN ---
-  if (!user) {
-    return (
-      <main className="pt-32 pb-16 text-center min-h-[70vh] flex flex-col items-center justify-center bg-haveli-bg">
-        <div className="lux-card max-w-lg w-full border-t-4 border-haveli-accent">
-          <i className="fas fa-lock text-5xl text-haveli-accent mb-6"></i>
-          <h2 className="text-3xl font-bold font-display text-haveli-heading mb-3">Login Required</h2>
-          <p className="text-haveli-muted mb-10 font-light">Please sign in to access Veridian Haveli's In-Room Dining.</p>
-          <Link to="/login" className="btn btn-secondary btn-block h-12">
-            Sign In Now
-          </Link>
-        </div>
-      </main>
-    );
-  }
+  const totals = useMemo(() => {
+    let foodTotal = 0;
+    for (const item of Object.values(cart)) {
+      foodTotal += item.price * item.quantity;
+    }
+    const serviceCharge = foodTotal * SERVICE_CHARGE_RATE;
+    const grandTotal = foodTotal + serviceCharge;
+    return { foodTotal, serviceCharge, grandTotal };
+  }, [cart]);
 
-  // --- HARD BLOCK 2: MUST HAVE A BOOKING ---
-  if (user.role !== 'admin' && !user.activeBooking) {
-    return (
-      <main className="pt-32 pb-16 text-center min-h-[70vh] flex flex-col items-center justify-center bg-haveli-bg">
-        <div className="lux-card max-w-lg w-full border-t-4 border-red-500">
-          <i className="fas fa-bed text-5xl text-haveli-muted mb-6"></i>
-          <h2 className="text-3xl font-bold font-display text-haveli-heading mb-3">Active Residency Required</h2>
-          <p className="text-haveli-muted mb-10 font-light">In-room dining is a guest-exclusive amenity. You must have an active reservation to proceed.</p>
-          <Link to="/booking" className="btn btn-secondary btn-block h-12">
-            Reserve a Suite
-          </Link>
-        </div>
-      </main>
-    );
-  }
 
+  // --- HANDLERS ---
   const handleCategoryToggle = (key) => {
     setActiveCategory(activeCategory === key ? null : key);
   };
@@ -86,16 +76,6 @@ const Order = () => {
       return newCart;
     });
   };
-
-  const totals = useMemo(() => {
-    let foodTotal = 0;
-    for (const item of Object.values(cart)) {
-      foodTotal += item.price * item.quantity;
-    }
-    const serviceCharge = foodTotal * SERVICE_CHARGE_RATE;
-    const grandTotal = foodTotal + serviceCharge;
-    return { foodTotal, serviceCharge, grandTotal };
-  }, [cart]);
 
   const handlePlaceOrder = () => {
     if (!guestInfo.roomNumber || !guestInfo.guestName) {
@@ -126,13 +106,49 @@ const Order = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCart({});
-    // Reset room selection if user has multiple rooms, otherwise keep the default
     setGuestInfo(prev => ({ ...prev, specialInstructions: '' }));
   };
+
+  // --- RENDERING GUARDS (Must be AFTER all hooks) ---
+
+  if (!user) {
+    return (
+      <main className="pt-32 pb-16 text-center min-h-[70vh] flex flex-col items-center justify-center bg-haveli-bg">
+        <div className="lux-card max-w-lg w-full border-t-4 border-haveli-accent">
+          <i className="fas fa-lock text-5xl text-haveli-accent mb-6"></i>
+          <h2 className="text-3xl font-bold font-display text-haveli-heading mb-3">Login Required</h2>
+          <p className="text-haveli-muted mb-10 font-light">Please sign in to access Veridian Haveli's In-Room Dining.</p>
+          <Link to="/login" className="btn btn-secondary btn-block h-12">
+            Sign In Now
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (user.role !== 'admin' && activeRooms.length === 0) {
+    return (
+      <main className="pt-32 pb-16 text-center min-h-[70vh] flex flex-col items-center justify-center bg-haveli-bg">
+        <div className="lux-card max-w-lg w-full border-t-4 border-red-500">
+          <i className="fas fa-bed text-5xl text-haveli-muted mb-6"></i>
+          <h2 className="text-3xl font-bold font-display text-haveli-heading mb-3">Active Residency Required</h2>
+          <p className="text-haveli-muted mb-10 font-light leading-relaxed">
+            In-room dining is a guest-exclusive amenity. You must be currently checked into a heritage suite to access the culinary service.
+          </p>
+          <Link to="/profile" className="btn btn-secondary btn-block h-12 shadow-sm">
+            View My Folio
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   if (!foodMenu) {
     return <div className="min-h-screen bg-haveli-bg flex items-center justify-center font-display text-haveli-heading">Preparing Menu...</div>;
   }
+
+  // --- MAIN RENDER ---
+  const displayName = user.fullName || user.username;
 
   return (
     <main className="pt-32 pb-20 bg-haveli-bg min-h-screen">
@@ -143,7 +159,7 @@ const Order = () => {
           <p className="text-haveli-muted max-w-2xl mx-auto font-light">Exquisite flavors delivered to your heritage suite</p>
           <div className="mt-8 bg-haveli-section border border-haveli-border rounded-full py-2 px-8 max-w-2xl mx-auto inline-block">
             <p className="text-haveli-primary text-xs font-medium uppercase tracking-tighter">
-                <i className="fas fa-info-circle mr-2"></i>Verified Guest Service for Resident {user.username}
+                <i className="fas fa-info-circle mr-2"></i>Verified Guest Service for Resident {displayName.toUpperCase()}
             </p>
           </div>
         </div>
@@ -152,26 +168,28 @@ const Order = () => {
           <h2 className="text-2xl font-bold mb-8 font-display text-haveli-heading border-b border-haveli-border pb-4">Order Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            {/* ROOM SELECTION: Input or Dropdown */}
-            <div>
+            <div className="relative">
               <label className="block text-xs font-bold text-haveli-muted uppercase tracking-widest mb-3">Suite Selection *</label>
               {activeRooms.length > 1 ? (
-                <select 
-                  value={guestInfo.roomNumber}
-                  onChange={(e) => setGuestInfo({...guestInfo, roomNumber: e.target.value})}
-                  className="w-full h-12 px-6 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-body font-light appearance-none"
-                >
-                  <option value="">Select a Suite</option>
-                  {activeRooms.map(room => (
-                    <option key={room._id || room.id} value={room.roomNumber}>Suite {room.roomNumber}</option>
-                  ))}
-                </select>
+                <>
+                  <select 
+                    value={guestInfo.roomNumber}
+                    onChange={(e) => setGuestInfo({...guestInfo, roomNumber: e.target.value})}
+                    className="w-full h-12 px-6 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-heading font-bold appearance-none relative z-10"
+                  >
+                    <option value="" disabled>Select a Suite</option>
+                    {activeRooms.map(room => (
+                      <option key={room._id || room.id} value={room.roomNumber}>Suite {room.roomNumber}</option>
+                    ))}
+                  </select>
+                  <i className="fas fa-chevron-down absolute right-4 top-[42px] text-haveli-accent text-xs z-0"></i>
+                </>
               ) : (
                 <input
                   type="text"
                   readOnly
-                  value={guestInfo.roomNumber || 'Detecting Room...'}
-                  className="w-full h-12 px-6 bg-haveli-section border border-haveli-border rounded-xl text-haveli-body font-bold"
+                  value={guestInfo.roomNumber ? `Suite ${guestInfo.roomNumber}` : 'Detecting Room...'}
+                  className="w-full h-12 px-6 bg-haveli-section border border-haveli-border rounded-xl text-haveli-heading font-bold"
                 />
               )}
             </div>
@@ -227,8 +245,6 @@ const Order = () => {
   );
 };
 
-// --- Sub-Components ---
-
 const FormInput = ({ label, id, value, onChange, readOnly = false }) => (
   <div>
     <label className="block text-xs font-bold text-haveli-muted uppercase tracking-widest mb-3">{label}</label>
@@ -237,7 +253,7 @@ const FormInput = ({ label, id, value, onChange, readOnly = false }) => (
       id={id}
       value={value}
       readOnly={readOnly}
-      className={`w-full h-12 px-6 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-body ${readOnly ? 'opacity-70 font-bold' : 'font-light'}`}
+      className={`w-full h-12 px-6 bg-haveli-section border border-haveli-border rounded-xl focus:outline-none focus:border-haveli-primary text-haveli-heading ${readOnly ? 'font-bold' : 'font-light'}`}
       required
     />
   </div>
