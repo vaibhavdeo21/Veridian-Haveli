@@ -658,7 +658,7 @@ const PaymentForm = ({ finalTotals, onConfirm, paymentMode, setPaymentMode }) =>
 
       <div className={paymentMode === 'PayAtHotel' ? 'mt-auto' : ''}>
         <button
-          onClick={() => onConfirm(paymentMode, amountToPay)}
+          onClick={() => (paymentMode, amountToPay)}
           className={`w-full h-14 rounded-xl font-bold text-lg transition shadow-sm hover:shadow-md tracking-wider ${paymentMode === 'PayAtHotel' ? 'border border-haveli-accent text-haveli-accent hover:bg-haveli-bg uppercase text-sm' : 'bg-haveli-primary text-white hover:bg-haveli-primaryHover'}`}
         >
           {paymentMode === 'PayAtHotel' ? (
