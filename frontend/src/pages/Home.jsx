@@ -15,7 +15,6 @@ const slides = [
 const Home = () => {
   usePageTitle("VERIDIAN HAVELI | Heritage Sanctuary");
   const [currentSlide, setCurrentSlide] = useState(0);
-  const navigate = useNavigate();
 
   // --- Admin Login State ---
   const [adminCredentials, setAdminCredentials] = useState({ username: '', password: '' });
