@@ -7,7 +7,6 @@ const slides = [
   'https://media.istockphoto.com/id/1217681157/photo/hallways-in-the-taj-mahal-mosque-agra-india.jpg?s=612x612&w=0&k=20&c=4FRM0iJAdnm0Gagwn7KC8o58eggf6WqA2eeYLMAhlNQ=', // Palace arches corridor
   'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1920&h=900&fit=crop', // Heritage palace exterior
   'https://images.unsplash.com/photo-1576485375217-d6a95e34d043?w=1920&h=900&fit=crop', // Indoor palace room
-  'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?w=1920&h=900&fit=crop', // Pool courtyard palace
   'https://www.korea.net/upload/content/editImage/20201221134128973_XI8FWU96.jpg', // Evening lantern palace
   'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=1920&h=900&fit=crop', // Night heritage lighting
 ];
