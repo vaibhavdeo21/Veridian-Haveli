@@ -82,10 +82,6 @@ const Booking = () => {
     return counts;
   }, [rooms]);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentStep]);
-
   const nights = useMemo(() => {
     if (!dates.checkIn || !dates.checkOut) return 0;
     const checkIn = new Date(dates.checkIn);
