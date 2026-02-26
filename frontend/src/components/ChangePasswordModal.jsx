@@ -6,7 +6,7 @@ import { useNotification } from '../context/NotificationContext.jsx';
 const ChangePasswordModal = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { showNotification } = useNotification();
-  
+
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -22,7 +22,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (formData.newPassword !== formData.confirmPassword) {
       return showNotification("New passwords do not match!", "error");
     }
@@ -37,7 +37,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword
       });
-      
+
       showNotification("Password updated successfully!", "success");
       onClose();
       setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -66,17 +66,17 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
             <i className="fas fa-times text-lg"></i>
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Current Credential</label>
             <div className="relative">
               <i className="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs opacity-60"></i>
-              <input 
-                type="password" id="currentPassword" value={formData.currentPassword} onChange={handleChange} 
-                className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+              <input
+                type="password" id="currentPassword" value={formData.currentPassword} onChange={handleChange}
+                className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light"
                 placeholder="Enter current password"
-                required 
+                required
               />
             </div>
           </div>
@@ -86,29 +86,29 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
               <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">New Password</label>
               <div className="relative">
                 <i className="fas fa-key absolute left-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs opacity-60"></i>
-                <input 
-                  type="password" id="newPassword" value={formData.newPassword} onChange={handleChange} 
-                  className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+                <input
+                  type="password" id="newPassword" value={formData.newPassword} onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light"
                   placeholder="Minimum 6 characters"
-                  required 
+                  required
                 />
               </div>
             </div>
-            
+
             <div>
               <label className="block text-[10px] font-bold text-haveli-muted uppercase tracking-[0.2em] mb-2">Confirm New Password</label>
               <div className="relative">
                 <i className="fas fa-check-double absolute left-4 top-1/2 -translate-y-1/2 text-haveli-accent text-xs opacity-60"></i>
-                <input 
-                  type="password" id="confirmPassword" value={formData.confirmPassword} onChange={handleChange} 
-                  className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light" 
+                <input
+                  type="password" id="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-3 bg-haveli-section border border-haveli-border rounded-xl focus:ring-1 focus:ring-haveli-primary focus:border-haveli-primary outline-none transition-all font-light"
                   placeholder="Re-enter new password"
-                  required 
+                  required
                 />
               </div>
             </div>
           </div>
-          
+
           <div className="pt-6 flex space-x-4">
             {/* btn-outline used for secondary action */}
             <button type="button" onClick={onClose} className="btn btn-outline flex-1 h-12">
@@ -121,7 +121,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
             </button>
           </div>
         </form>
-        
+
         <p className="text-center text-[10px] text-haveli-muted mt-6 uppercase tracking-tighter">
           <i className="fas fa-info-circle mr-1 text-haveli-accent"></i>
           This action will secure your heritage account immediately.
