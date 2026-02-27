@@ -84,13 +84,11 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // --- NEW: GUARANTEED ROOM ASSIGNMENT LOGIC ---
   const addCustomer = async (guestDetails, roomData, paymentMode, amountPaid) => {
     try {
       let finalRoomNumber = `Online-${roomData.baseType.toUpperCase()}`;
       let physicalRoomIdToLock = null;
 
-      // If they paid online, we MUST lock a real room right now.
       if (paymentMode !== 'PayAtHotel') {
         const availableRoom = rooms.find(r =>
           r.type.toLowerCase().includes(roomData.baseType.toLowerCase()) &&
@@ -101,7 +99,6 @@ export const DataProvider = ({ children }) => {
           finalRoomNumber = availableRoom.roomNumber;
           physicalRoomIdToLock = availableRoom._id || availableRoom.id;
         } else {
-          // Fallback if inventory discrepancy occurs during checkout
           showNotification(`Warning: No physical ${roomData.baseType} rooms left to lock!`, 'error');
         }
       }
@@ -122,7 +119,7 @@ export const DataProvider = ({ children }) => {
         paymentMode: paymentMode,
         amountPaid: amountPaid || 0,
         status: 'Booked',
-        isRepeatCustomer: guestDetails.isRepeatCustomer // <-- ADD THIS LINE
+        isRepeatCustomer: guestDetails.isRepeatCustomer 
       };
 
       const res = await axios.post('/api/bookings', bookingPayload);
@@ -137,7 +134,6 @@ export const DataProvider = ({ children }) => {
 
         if (updateUserStays) updateUserStays(res.data);
 
-        // LOCK THE INVENTORY IN DB AND STATE
         if (physicalRoomIdToLock) {
           await axios.patch(`/api/rooms/${physicalRoomIdToLock}`, { availability: 'Booked' });
           setRooms(prev => prev.map(r =>
@@ -152,7 +148,7 @@ export const DataProvider = ({ children }) => {
     } catch (err) {
       console.error("Booking Error:", err.response?.data || err.message);
       showNotification('Failed to add booking to database', 'error');
-      throw err; // Rethrow to handle in Booking.jsx
+      throw err; 
     }
   };
 
@@ -160,17 +156,14 @@ export const DataProvider = ({ children }) => {
     setCustomers(prev => prev.map(c => (c.id === customerId || c._id === customerId) ? { ...c, paymentStatus: status } : c));
   };
 
-  // --- NEW: LATE NIGHT CHECK-IN LOGIC ---
   const checkInCustomer = async (customerId, physicalRoomNo) => {
     try {
-      // Check current time for late night fee (11:00 PM to 6:00 AM)
       const currentHour = new Date().getHours();
       let lateNightFee = 0;
       if (currentHour >= 23 || currentHour < 6) {
         lateNightFee = 249;
       }
 
-      // Update status, roomNumber, AND apply late fee in MongoDB
       await axios.patch(`/api/bookings/${customerId}`, {
         status: 'CheckedIn',
         roomNumber: physicalRoomNo,
@@ -241,12 +234,27 @@ export const DataProvider = ({ children }) => {
     }
   };
 
+  // --- REINFORCED: FREE ROOM ON CUSTOMER DELETION ---
   const deleteCustomer = async (customerId) => {
     try {
+      // Find customer before deleting so we know what room to release
+      const customerToCancel = customers.find(c => c._id === customerId || c.id === customerId);
+
       await axios.delete(`/api/bookings/${customerId}`);
+      
       // Remove from local state
       setCustomers(prev => prev.filter(c => c._id !== customerId && c.id !== customerId));
-      showNotification('Customer permanently deleted from database.', 'success');
+      
+      // Free up the room instantly in the frontend state
+      if (customerToCancel && customerToCancel.roomNumber && !customerToCancel.roomNumber.toLowerCase().includes('online')) {
+        setRooms(prev => prev.map(r => 
+          String(r.roomNumber) === String(customerToCancel.roomNumber) 
+            ? { ...r, availability: 'Available' } 
+            : r
+        ));
+      }
+
+      showNotification('Booking removed and room freed successfully.', 'success');
     } catch (err) {
       console.error("Delete error:", err);
       showNotification('Failed to delete customer', 'error');
@@ -256,25 +264,18 @@ export const DataProvider = ({ children }) => {
   const addFoodItem = async (categoryKey, itemDetails) => {
     try {
       const formData = new FormData();
-      // 'description' must match the field name expected by your Mongoose model
       formData.append('name', itemDetails.name);
       formData.append('description', itemDetails.desc);
       formData.append('price', itemDetails.price);
 
-      // Ensure 'image' matches upload.single('image') in your backend
       if (itemDetails.imageFile) {
         formData.append('image', itemDetails.imageFile);
       }
 
-      /* FIX: The categoryKey is now passed in the URL. 
-         Axios will automatically handle the 'Content-Type' and 'boundary' 
-         when it detects a FormData object.
-      */
       const res = await axios.post(`/api/food/${categoryKey}`, formData);
 
       const newItem = res.data;
       setFoodMenu(prev => {
-        // Use the categoryKey directly to ensure state stays in sync with the URL param
         const cat = categoryKey.toLowerCase();
         return {
           ...prev,
@@ -380,20 +381,14 @@ export const DataProvider = ({ children }) => {
   const editFoodItem = async (categoryKey, itemId, itemDetails) => {
     try {
       const formData = new FormData();
-      // 'description' must match the field name expected by your Mongoose model
       formData.append('name', itemDetails.name);
       formData.append('description', itemDetails.desc);
       formData.append('price', itemDetails.price);
 
-      // Only append the image if a new file was selected during the edit
       if (itemDetails.imageFile) {
         formData.append('image', itemDetails.imageFile);
       }
 
-      /* FIX: We send the request to the category-specific PUT/PATCH endpoint.
-         The backend uploadMiddleware uses the URL param to place the new image 
-         in 'uploads/menu/:category/'.
-      */
       const res = await axios.patch(`/api/food/${categoryKey}/${itemId}`, formData);
 
       const updatedItem = res.data;

@@ -96,18 +96,13 @@ router.post('/', async (req, res) => {
   }
 });
 
-/* --- REINFORCED ROUTE: UPLOAD ID DOCUMENT ---
-  Uses dynamic 'upload' middleware. 
-  The destination subfolder (/uploads/customer_documents/) is now 
-  handled automatically by req.originalUrl logic in the middleware.
-*/
+/* --- REINFORCED ROUTE: UPLOAD ID DOCUMENT --- */
 router.post('/:id/upload-id', upload.single('idFile'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Relative path used for DB storage
     const documentPath = `/uploads/customer_documents/${req.file.filename}`;
 
     const updatedBooking = await Booking.findByIdAndUpdate(
@@ -137,6 +132,16 @@ router.patch('/:id', async (req, res) => {
 
     if (!updatedBooking) {
       return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // --- NEW FIX: Unlock room if status is manually patched to Cancelled ---
+    if (req.body.status && req.body.status.toLowerCase() === 'cancelled') {
+      if (updatedBooking.roomNumber && !updatedBooking.roomNumber.toLowerCase().includes('online')) {
+        await Room.findOneAndUpdate(
+          { roomNumber: updatedBooking.roomNumber },
+          { $set: { availability: 'Available' } }
+        );
+      }
     }
 
     res.json(updatedBooking);
@@ -187,9 +192,21 @@ router.get('/analytics', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const deletedBooking = await Booking.findByIdAndDelete(req.params.id);
-    if (!deletedBooking) return res.status(404).json({ message: 'Booking not found' });
-    res.json({ message: 'Customer deleted permanently' });
+    // --- NEW FIX: Find the booking FIRST to get the room number before deleting ---
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    // Unlock the Room in the database
+    if (booking.roomNumber && !booking.roomNumber.toLowerCase().includes('online')) {
+      await Room.findOneAndUpdate(
+        { roomNumber: booking.roomNumber },
+        { $set: { availability: 'Available' } }
+      );
+    }
+
+    // Now safely delete the customer booking
+    await Booking.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Customer deleted permanently and room freed' });
   } catch (err) {
     res.status(500).json({ message: 'Error deleting customer' });
   }
